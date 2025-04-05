@@ -13,7 +13,7 @@ with st.expander("🔐 Verificar credenciais carregadas (secrets.toml)"):
     st.code(f"Passphrase: ✅")
 
 def get_price(symbol, product_type):
-    url = f"https://api.bitget.com/api/mix/v1/market/ticker?symbol={symbol}&productType={product_type}"
+    url = f"https://api.bitget.com/api/mix/v1/market/ticker?symbol={symbol}&productType=umcbl"
     response = requests.get(url)
     response.raise_for_status()
     data = response.json()
