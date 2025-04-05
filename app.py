@@ -3,61 +3,54 @@ import streamlit as st
 import requests
 import datetime
 
-# ======= CONFIGURAÇÃO VIA SECRETS =======
-api_key = st.secrets["bitget"]["api_key"]
-secret_key = st.secrets["bitget"]["secret_key"]
-passphrase = st.secrets["bitget"]["passphrase"]
-
-headers = {
-    'ACCESS-KEY': api_key,
-    'ACCESS-SIGN': '',
-    'ACCESS-TIMESTAMP': '',
-    'ACCESS-PASSPHRASE': passphrase,
-    'Content-Type': 'application/json'
-}
-
-# ======= LAYOUT =======
 st.set_page_config(page_title="Painel Trading Bitget", layout="wide")
-st.title("📊 Painel de Trading - Dados Reais (BTC/ETH)")
+st.title("📊 Painel de Trading - BTC/ETH (Dados Reais)")
 
-# ======= API DE PREÇOS (apenas visual) =======
-price_btc = requests.get("https://api.bitget.com/api/spot/v1/market/ticker?symbol=BTCUSDT").json()
-price_eth = requests.get("https://api.bitget.com/api/spot/v1/market/ticker?symbol=ETHUSDT").json()
+# ===== Atualização de Preço (sem cache) =====
+@st.cache_data(ttl=0, show_spinner=False)
+def get_price(symbol):
+    url = f"https://api.bitget.com/api/spot/v1/market/ticker?symbol={symbol}"
+    try:
+        response = requests.get(url, timeout=5)
+        data = response.json()
+        return float(data['data']['close'])
+    except:
+        return None
 
-btc_price = float(price_btc['data']['close']) if 'data' in price_btc else "Erro"
-eth_price = float(price_eth['data']['close']) if 'data' in price_eth else "Erro"
+btc_price = get_price("BTCUSDT")
+eth_price = get_price("ETHUSDT")
 
-st.subheader("📈 Preços em Tempo Real")
+# ===== Exibição de Cotações =====
+st.subheader("📈 Preço Atual (via Bitget API)")
 col1, col2 = st.columns(2)
 with col1:
-    st.metric("BTC/USDT", f"${btc_price:,.2f}")
+    if btc_price:
+        st.metric("BTC/USDT", f"${btc_price:,.2f}")
+    else:
+        st.error("Erro ao obter preço BTC")
+
 with col2:
-    st.metric("ETH/USDT", f"${eth_price:,.2f}")
+    if eth_price:
+        st.metric("ETH/USDT", f"${eth_price:,.2f}")
+    else:
+        st.error("Erro ao obter preço ETH")
+
+# ===== Estratégia Recomendada =====
+st.markdown("---")
+st.subheader("🤖 Estratégia Recomendada (baseada no preço atual)")
+
+if btc_price:
+    low = btc_price * 0.985
+    high = btc_price * 1.012
+    stop = low * 0.995
+    st.markdown(f"**BTC/USDT**\n- Modo: Long\n- Faixa: {low:,.0f} – {high:,.0f}\n- Alavancagem: 3x\n- Stop: {stop:,.0f}")
+
+if eth_price:
+    low = eth_price * 0.985
+    high = eth_price * 1.018
+    stop = low * 0.990
+    st.markdown(f"**ETH/USDT**\n- Modo: Neutro\n- Faixa: {low:,.0f} – {high:,.0f}\n- Alavancagem: 2x\n- Stop: {stop:,.0f}")
 
 st.markdown("---")
-
-# ======= Estratégia Recomendada com base no preço atual =======
-st.subheader("🤖 Estratégia Recomendada")
-
-if isinstance(btc_price, float):
-    btc_range_low = btc_price * 0.98
-    btc_range_high = btc_price * 1.015
-    st.markdown(f"""**BTC/USDT**
-- Modo: Long
-- Faixa: {btc_range_low:,.0f} – {btc_range_high:,.0f}
-- Alavancagem: 3x
-- Stop: {btc_range_low * 0.995:,.0f}
-""")
-
-if isinstance(eth_price, float):
-    eth_range_low = eth_price * 0.985
-    eth_range_high = eth_price * 1.02
-    st.markdown(f"""**ETH/USDT**
-- Modo: Neutro
-- Faixa: {eth_range_low:,.0f} – {eth_range_high:,.0f}
-- Alavancagem: 2x
-- Stop: {eth_range_low * 0.99:,.0f}
-""")
-
-st.markdown("---")
-st.caption("Última atualização: " + datetime.datetime.now().strftime("%d/%m/%Y %H:%M") + " UTC")
+now = datetime.datetime.utcnow().strftime("%d/%m/%Y %H:%M UTC")
+st.caption("🔄 Última atualização: " + now)
