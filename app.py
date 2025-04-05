@@ -6,15 +6,20 @@ import datetime
 st.set_page_config(page_title="Painel Trading Bitget", layout="wide")
 st.title("📊 Painel de Trading - BTC/ETH (Dados Reais)")
 
-# ===== Atualização de Preço (sem cache) =====
-@st.cache_data(ttl=0, show_spinner=False)
+# Função atualizada com debug
 def get_price(symbol):
     url = f"https://api.bitget.com/api/spot/v1/market/ticker?symbol={symbol}"
     try:
         response = requests.get(url, timeout=5)
+        response.raise_for_status()
         data = response.json()
-        return float(data['data']['close'])
-    except:
+        if "data" in data and "close" in data["data"]:
+            return float(data["data"]["close"])
+        else:
+            st.warning(f"⚠️ Estrutura inesperada da API Bitget para {symbol}: {data}")
+            return None
+    except Exception as e:
+        st.error(f"Erro ao buscar {symbol}: {str(e)}")
         return None
 
 btc_price = get_price("BTCUSDT")
@@ -27,13 +32,13 @@ with col1:
     if btc_price:
         st.metric("BTC/USDT", f"${btc_price:,.2f}")
     else:
-        st.error("Erro ao obter preço BTC")
+        st.error("❌ BTC não carregado")
 
 with col2:
     if eth_price:
         st.metric("ETH/USDT", f"${eth_price:,.2f}")
     else:
-        st.error("Erro ao obter preço ETH")
+        st.error("❌ ETH não carregado")
 
 # ===== Estratégia Recomendada =====
 st.markdown("---")
