@@ -12,7 +12,7 @@ with st.expander("🔐 Verificar credenciais carregadas (secrets.toml)"):
     st.markdown("Passphrase: ✅")
 
 def get_price(symbol: str):
-    url = f"https://api.bitget.com/api/mix/v1/market/ticker?symbol={symbol}&productType=umcbl"
+    url = f"https://api.bitget.com/api/mix/v1/market/ticker?symbol=BTCUSDT&productType=umcbl"
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
@@ -27,14 +27,14 @@ st.subheader("📈 Preço Atual (mercado de futuros)")
 col1, col2 = st.columns(2)
 
 with col1:
-    btc_price = get_price("BTC_USDT")
+    btc_price = get_price("BTCUSDT")
     if btc_price:
         st.success(f"Preço BTC/USDT: ${btc_price}")
     else:
         st.error("BTC não carregado")
 
 with col2:
-    eth_price = get_price("ETH_USDT")
+    eth_price = get_price("ETHUSDT")
     if eth_price:
         st.success(f"Preço ETH/USDT: ${eth_price}")
     else:
