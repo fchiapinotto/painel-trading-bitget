@@ -7,7 +7,7 @@ st.set_page_config(page_title="Painel BTC/ETH - Futuros Bitget", layout="centere
 st.title("📉 Painel BTC/ETH - Futuros Bitget")
 
 with st.expander("🔐 Verificar credenciais carregadas (secrets.toml)"):
-    st.code(f"API Key: {st.secrets['API_KEY']}")
+    st.code(f"API Key: {st.secrets['bitget']['apiKey']}")
     st.markdown("Secret Key: ✅")
     st.markdown("Passphrase: ✅")
 
