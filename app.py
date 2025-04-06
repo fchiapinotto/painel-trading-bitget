@@ -11,13 +11,12 @@ with st.expander("🔐 Verificar credenciais carregadas (secrets.toml)"):
     st.markdown("Secret Key: ✅")
     st.markdown("Passphrase: ✅")
 
-def get_price(symbol: str):
-    url = f"https://api.bitget.com/api/mix/v1/market/ticker?symbol=BTCUSDT&productType=umcbl"
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return float(data['data']['last'])
+def get_price(symbol: str, product_type: str):
+    url = f"https://api.bitget.com/api/v2/mix/market/ticker?symbol={symbol}&productType={product_type}"
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+    return float(data['data']['lastPr'])
     except Exception as e:
         st.error(f"Erro de conexão ({symbol}): {e}")
         return None
