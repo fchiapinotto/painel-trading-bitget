@@ -1,137 +1,124 @@
-
+# app_btc_analise_tecnica.py
 import streamlit as st
 import requests
-import hmac
-import hashlib
-import time
-import base64
-import json
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import time
+from datetime import datetime
+import plotly.graph_objects as go
+from scipy.signal import argrelextrema
 
-st.set_page_config(page_title="Bitget Futuros BTC/ETH", layout="wide")
-st.title("📊 Painel Bitget - Futuros BTC/ETH (USDT-M)")
+# ========== 🧠 GPT ANALYSIS PLACEHOLDER ==========
+def generate_gpt_analysis(df, timeframe):
+    last_rsi = df['RSI'].iloc[-1]
+    last_macd = df['MACD'].iloc[-1]
+    signal = df['Signal'].iloc[-1]
+    bb_width = (df['BB_Upper'] - df['BB_Lower']).iloc[-1]
 
-# === ⚙️ Carregar credenciais do secrets.toml ===
-api_key = st.secrets["bitget"]["apiKey"]
-secret_key = st.secrets["bitget"]["secretKey"]
-passphrase = st.secrets["bitget"]["passphrase"]
+    if last_rsi < 30:
+        trend = "possível sobrevenda"
+    elif last_rsi > 70:
+        trend = "possível sobrecompra"
+    elif last_macd > signal:
+        trend = "momentum positivo"
+    else:
+        trend = "lateralização ou correção"
 
-BASE_URL = "https://api.bitget.com"
+    return f"{timeframe}: {trend}, RSI em {last_rsi:.1f}, MACD {'acima' if last_macd > signal else 'abaixo'} do sinal."
 
-# === Função para assinar requisições autenticadas ===
-def sign_request(timestamp, method, request_path, body_str=""):
-    message = f"{timestamp}{method}{request_path}{body_str}"
-    mac = hmac.new(secret_key.encode(), message.encode(), digestmod=hashlib.sha256)
-    return base64.b64encode(mac.digest()).decode()
-
-def get_auth_headers(method, path, body_str=""):
-    timestamp = str(int(time.time() * 1000))
-    signature = sign_request(timestamp, method, path, body_str)
-    return {
-        "ACCESS-KEY": api_key,
-        "ACCESS-SIGN": signature,
-        "ACCESS-TIMESTAMP": timestamp,
-        "ACCESS-PASSPHRASE": passphrase,
-        "Content-Type": "application/json"
-    }
-
-def get_ticker(symbol="BTCUSDT_UMCBL"):
-    try:
-        url = f"{BASE_URL}/api/mix/v1/market/ticker?symbol={symbol}&productType=umcbl"
-        r = requests.get(url, timeout=5)
-        return float(r.json()["data"]["last"])
-    except Exception as e:
-        st.error(f"Erro ao obter preço de {symbol}: {e}")
-        return None
-
-def get_position(symbol="BTCUSDT_UMCBL"):
-    try:
-        endpoint = f"/api/mix/v1/position/single-position?symbol={symbol}&marginCoin=USDT"
-        url = BASE_URL + endpoint
-        headers = get_auth_headers("GET", endpoint)
-        r = requests.get(url, headers=headers)
-        return r.json()
-    except Exception as e:
-        return {"error": str(e)}
-
-# === Preços ===
-btc_price = get_ticker("BTCUSDT_UMCBL")
-eth_price = get_ticker("ETHUSDT_UMCBL")
-
-st.subheader("📈 Preços em tempo real (Futuros USDT-M)")
-col1, col2 = st.columns(2)
-with col1:
-    if btc_price:
-        st.metric("BTC/USDT", f"${btc_price:,.2f}")
-with col2:
-    if eth_price:
-        st.metric("ETH/USDT", f"${eth_price:,.2f}")
-
-# === Exibir posições abertas ===
-st.subheader("📊 Posição Atual (BTC/ETH)")
-btc_pos = get_position("BTCUSDT_UMCBL")
-eth_pos = get_position("ETHUSDT_UMCBL")
-st.write("🔸 BTCUSDT:", btc_pos)
-st.write("🔸 ETHUSDT:", eth_pos)
-
-# === Estratégia Sugerida ===
-st.subheader("🤖 Estratégia Recomendada")
-if btc_price:
-    st.markdown(f"**BTC/USDT**\n- Modo: Neutro\n- Faixa sugerida: {btc_price*0.985:,.0f} – {btc_price*1.01:,.0f}\n- Stop: {btc_price*0.97:,.0f}")
-if eth_price:
-    st.markdown(f"**ETH/USDT**\n- Modo: Neutro\n- Faixa sugerida: {eth_price*0.985:,.0f} – {eth_price*1.01:,.0f}\n- Stop: {eth_price*0.97:,.0f}")
-
-# === 📉 Análise Técnica BTC ===
-st.subheader("📉 Análise Técnica BTC/USDT")
-
-def get_candles(symbol="BTCUSDT", interval="1h", limit=200):
-    url = f"https://api.bitget.com/api/mix/v1/market/candles?symbol={symbol}&granularity={interval}&limit={limit}&productType=umcbl"
-    response = requests.get(url)
-    data = response.json()
-    if "data" not in data:
-        return None
-    candles = pd.DataFrame(data["data"], columns=["timestamp","open","high","low","close","volume","turnover"])
-    candles["timestamp"] = pd.to_datetime(candles["timestamp"], unit="ms")
-    candles.set_index("timestamp", inplace=True)
-    candles = candles.astype(float).sort_index()
-    return candles
-
-df = get_candles("BTCUSDT", "1h", 200)
-
-if df is not None:
+# ========== 🧮 INDICADORES ==========
+def compute_indicators(df):
     df["EMA12"] = df["close"].ewm(span=12).mean()
     df["EMA26"] = df["close"].ewm(span=26).mean()
     df["MACD"] = df["EMA12"] - df["EMA26"]
     df["Signal"] = df["MACD"].ewm(span=9).mean()
-    df["RSI"] = 100 - (100 / (1 + df["close"].diff().apply(lambda x: max(x,0)).rolling(14).mean() / df["close"].diff().apply(lambda x: abs(x)).rolling(14).mean()))
-    df["BB_MID"] = df["close"].rolling(20).mean()
-    df["BB_UPPER"] = df["BB_MID"] + 2 * df["close"].rolling(20).std()
-    df["BB_LOWER"] = df["BB_MID"] - 2 * df["close"].rolling(20).std()
+    delta = df["close"].diff()
+    gain = delta.where(delta > 0, 0).rolling(14).mean()
+    loss = -delta.where(delta < 0, 0).rolling(14).mean()
+    rs = gain / loss
+    df["RSI"] = 100 - (100 / (1 + rs))
+    df["BB_Mid"] = df["close"].rolling(20).mean()
+    df["BB_Upper"] = df["BB_Mid"] + 2 * df["close"].rolling(20).std()
+    df["BB_Lower"] = df["BB_Mid"] - 2 * df["close"].rolling(20).std()
+    return df
 
-    fig, ax = plt.subplots(4, 1, figsize=(12, 12), sharex=True)
-    ax[0].plot(df["close"], label="Close")
-    ax[0].plot(df["BB_UPPER"], linestyle="--", label="BB Upper")
-    ax[0].plot(df["BB_LOWER"], linestyle="--", label="BB Lower")
-    ax[0].set_title("Preço + Bandas de Bollinger")
-    ax[0].legend()
+# ========== 🔻 SUPORTES ==========
+def detect_supports(df, order=10):
+    lows = df["low"].values
+    indices = argrelextrema(lows, np.less_equal, order=order)[0]
+    return df.iloc[indices][["low"]]
 
-    ax[1].plot(df["MACD"], label="MACD", color="blue")
-    ax[1].plot(df["Signal"], label="Signal", color="orange")
-    ax[1].set_title("MACD")
-    ax[1].legend()
+# ========== 🔄 API BITGET ==========
+def get_candles(symbol="BTCUSDT", granularity="1h", limit=200):
+    url = f"https://api.bitget.com/api/mix/v1/market/candles"
+    params = {"symbol": symbol, "granularity": granularity, "limit": limit, "productType": "umcbl"}
+    r = requests.get(url, params=params)
+    data = r.json()["data"]
+    df = pd.DataFrame(data, columns=["timestamp","open","high","low","close","volume","turnover"])
+    df = df.astype(float)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit='ms')
+    df = df.sort_values("timestamp")
+    df.set_index("timestamp", inplace=True)
+    return df
 
-    ax[2].plot(df["RSI"], label="RSI", color="purple")
-    ax[2].axhline(70, color="red", linestyle="--")
-    ax[2].axhline(30, color="green", linestyle="--")
-    ax[2].set_title("RSI")
-    ax[2].legend()
+# ========== 📊 TELA ==========
+st.set_page_config("Painel BTC/USDT", layout="wide")
+st.title("📊 BTC/USDT – Visão Técnica Avançada")
+st.caption(f"Última atualização: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
-    ax[3].bar(df.index, df["volume"], label="Volume", color="gray")
-    ax[3].set_title("Volume")
+# Consulta e indicadores
+timeframes = {"1D": "1440", "4H": "240", "1H": "60"}
+data = {}
+support_levels = {}
 
-    plt.tight_layout()
-    st.pyplot(fig)
-else:
-    st.error("Erro ao obter candles para análise técnica.")
+for tf_label, tf_val in timeframes.items():
+    df = get_candles("BTCUSDT", tf_val)
+    df = compute_indicators(df)
+    supports = detect_supports(df)
+    data[tf_label] = df
+    support_levels[tf_label] = supports
+
+# Valor atual
+price_now = data["1H"]["close"].iloc[-1]
+st.subheader(f"💰 Preço Atual BTC/USDT: ${price_now:,.2f}")
+
+# Tabela de indicadores por timeframe
+st.markdown("### 📊 Indicadores Técnicos (Resumo)")
+table = []
+for tf, df in data.items():
+    delta = df["close"].iloc[-1] - df["close"].iloc[-2]
+    perc = (delta / df["close"].iloc[-2]) * 100
+    table.append({
+        "Timeframe": tf,
+        "Variação": f"{perc:+.2f}%" + (" 🔺" if perc > 0 else " 🔻"),
+        "MACD": f"{df['MACD'].iloc[-1]:.2f}",
+        "RSI": f"{df['RSI'].iloc[-1]:.1f}",
+        "Bollinger": f"{df['BB_Upper'].iloc[-1]:.0f} / {df['BB_Lower'].iloc[-1]:.0f}",
+        "Análise GPT": generate_gpt_analysis(df, tf)
+    })
+st.dataframe(pd.DataFrame(table))
+
+# Plot do gráfico interativo com plotly
+df_plot = data["1H"]
+fig = go.Figure(data=[
+    go.Candlestick(x=df_plot.index, open=df_plot["open"], high=df_plot["high"],
+                   low=df_plot["low"], close=df_plot["close"], name="Candles"),
+    go.Scatter(x=df_plot.index, y=df_plot["BB_Upper"], mode='lines', name='BB Upper', line=dict(color='gray')),
+    go.Scatter(x=df_plot.index, y=df_plot["BB_Lower"], mode='lines', name='BB Lower', line=dict(color='gray')),
+])
+for level in support_levels["1H"]["low"]:
+    fig.add_hline(y=level, line_dash="dot", line_color="green")
+fig.update_layout(title="📈 Gráfico BTC/USDT (1H)", xaxis_rangeslider_visible=False)
+st.plotly_chart(fig, use_container_width=True)
+
+# Estratégia sugerida
+st.markdown("### 📌 Estratégias Recomendadas (Grid Trading)")
+grid_table = pd.DataFrame([
+    {"Modo": "Long", "Estratégia": "Pullback suporte", "Favorável": "✅", "Trigger": "Aprox. 81K",
+     "Faixa": "81K–84K", "Grades": 8, "Alav.": "3x", "Trailing": "Sim", "SL/TP": "SL 79K / TP 88K", "Duração": "3–5d"},
+    {"Modo": "Short", "Estratégia": "Reteste resistência", "Favorável": "❌", "Trigger": "Break 86K",
+     "Faixa": "85K–87K", "Grades": 10, "Alav.": "4x", "Trailing": "Não", "SL/TP": "SL 88K / TP 82K", "Duração": "2–4d"},
+    {"Modo": "Neutro", "Estratégia": "Lateralidade confirmada", "Favorável": "✅", "Trigger": "Range ativo",
+     "Faixa": "82K–85K", "Grades": 12, "Alav.": "2x", "Trailing": "Sim", "SL/TP": "SL 81 / TP 86", "Duração": "1–3d"},
+])
+st.dataframe(grid_table)
