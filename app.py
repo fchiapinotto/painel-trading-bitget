@@ -79,8 +79,10 @@ for tf_label, tf_val in timeframes.items():
     support_levels[tf_label] = supports
 
 # Valor atual
-price_now = data["1H"]["close"].iloc[-1]
-st.subheader(f"💰 Preço Atual BTC/USDT: ${price_now:,.2f}")
+if not data["1H"].empty:
+    price_now = data["1H"]["close"].iloc[-1]
+else:
+    st.error("Erro: Dados de 1H estão vazios. Verifique a API ou a resposta da Bitget.")st.subheader(f"💰 Preço Atual BTC/USDT: ${price_now:,.2f}")
 
 # Tabela de indicadores por timeframe
 st.markdown("### 📊 Indicadores Técnicos (Resumo)")
