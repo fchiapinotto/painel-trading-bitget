@@ -27,7 +27,7 @@ try:
         df = df.astype({"timestamp": "int64", "open": "float", "high": "float", "low": "float", "close": "float"})
 
         # Conversão de timestamp
-        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True).dt.tz_convert("America/Sao_Paulo")
 
         # Calcular indicadores
         df["ma20"] = df["close"].rolling(window=20).mean()
