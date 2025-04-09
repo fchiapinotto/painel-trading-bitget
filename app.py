@@ -1,6 +1,8 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import requests
 from datetime import datetime
 
@@ -28,6 +30,7 @@ try:
 
         # Conversão de timestamp
         df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True).dt.tz_convert("America/Sao_Paulo")
+        df["hora_formatada"] = df["timestamp"].dt.strftime("%d/%m %H:00")
 
         # Calcular indicadores
         df["ma20"] = df["close"].rolling(window=20).mean()
@@ -68,6 +71,19 @@ try:
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
+        # === Tabela interativa ===
+        st.subheader("📋 Tabela de Preços por Hora")
+        df_display = df[["hora_formatada", "open", "high", "low", "close"]].copy()
+        df_display.rename(columns={
+            "hora_formatada": "Horário (Brasília)",
+            "open": "Abertura",
+            "high": "Máximo",
+            "low": "Mínimo",
+            "close": "Fechamento"
+        }, inplace=True)
+        st.dataframe(df_display[::-1], use_container_width=True)
+
     else:
         st.error("Erro ao carregar dados da API Bitget.")
 
