@@ -75,7 +75,7 @@ try:
         xaxis_title="Hora",
         yaxis_title="Preço",
         xaxis_rangeslider_visible=False,
-        hovermode="x unified"
+        hovermode="x unified",
         xaxis=dict(
                 tickformat="%H:%M",
                 showgrid=True,
