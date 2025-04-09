@@ -62,7 +62,7 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         last = df.iloc[-1]
         prev = df.iloc[-2]
         var = ((last["close"] - prev["close"]) / prev["close"]) * 100
-        trend_icon = "🔺" if var > 0 else "🔻" if var < 0 else "➖"
+        trend_icon = "🔼" if var > 0 else "🔽" if var < 0 else "➖"
         trend_color = "green" if var > 0 else "red" if var < 0 else "orange"
         macd = "📈 Alta" if last["macd"] > last["signal"] else "📉 Baixa" if last["macd"] < last["signal"] else "⏸️ Neutro"
         if last["rsi"] > 70:
