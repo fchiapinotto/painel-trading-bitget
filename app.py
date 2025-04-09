@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import pandas as pd
@@ -27,7 +26,11 @@ try:
 
     # Processar os dados em um DataFrame
     df = pd.DataFrame(raw_data, columns=["timestamp", "open", "high", "low", "close", "volume", "quoteVolume"])
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit='ms')
+    
+    df["startTime"] = pd.to_datetime(df["startTime"], unit="ms")
+    df["endTime"] = pd.to_datetime(df["endTime"], unit="ms")
+
+df["timestamp"] = pd.to_datetime(df["timestamp"], unit='ms')
     df[["open", "high", "low", "close", "volume"]] = df[["open", "high", "low", "close", "volume"]].astype(float)
     df = df.sort_values("timestamp")
 
@@ -75,12 +78,7 @@ try:
         xaxis_title="Hora",
         yaxis_title="Preço",
         xaxis_rangeslider_visible=False,
-        hovermode="x unified",
-        xaxis=dict(
-                tickformat="%H:%M",
-                showgrid=True,
-                showline=True
-            ),
+        hovermode="x unified"
     )
 
     st.plotly_chart(fig, use_container_width=True)
