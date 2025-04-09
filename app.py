@@ -3,6 +3,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.graph_objects as go
+from datetime import datetime
 
 st.set_page_config(page_title="Painel Bitget - BTC/USDT", layout="wide")
 st.title("📊 Painel Bitget - Futuros BTC/USDT (USDT-M)")
@@ -55,7 +56,8 @@ def compute_rsi(series, period=14):
     ma_up = up.rolling(period).mean()
     ma_down = down.rolling(period).mean()
     rs = ma_up / ma_down
-    return 100 - (100 / (1 + rs)) if not rs.isnull().all() else None
+    rsi = 100 - (100 / (1 + rs))
+    return rsi.iloc[-1] if not rsi.isnull().all() else None
 
 def compute_macd(series):
     exp1 = series.ewm(span=12, adjust=False).mean()
@@ -98,5 +100,5 @@ try:
     price_now = float(resp.json()["data"]["last"])
     st.metric("BTC/USDT", f"${price_now:,.2f}")
 except:
-    st.write("BTC/USDT")
-    st.write("N/D")
+    st.error("Erro: Dados de 1H estão vazios. Verifique a API ou a resposta da Bitget.")
+    st.subheader("💰 Preço Atual BTC/USDT: N/D")
