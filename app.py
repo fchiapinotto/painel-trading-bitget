@@ -2,71 +2,98 @@
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from datetime import datetime
+import requests
+import datetime
 
-# Carregar os dados CSV
-df = pd.read_csv("candles_btcusdt_1h.csv")  # ajuste para o caminho correto se necessário
+# === Função para obter candles diretamente da API da Bitget ===
+def fetch_bitget_candles(symbol="BTCUSDT_UMCBL", interval="60", limit=100):
+    url = f"https://api.bitget.com/api/mix/v1/market/candles?symbol={symbol}&granularity={interval}&limit={limit}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()["data"]
+        df = pd.DataFrame(data, columns=["timestamp", "open", "high", "low", "close", "volume", "quoteVolume"])
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms")
+        df[["open", "high", "low", "close"]] = df[["open", "high", "low", "close"]].astype(float)
+        return df.sort_values("timestamp")
+    else:
+        return pd.DataFrame()
 
-# Processar dados
-df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-df.set_index('timestamp', inplace=True)
-df = df[['open', 'high', 'low', 'close']].astype(float)
+# === Funções de indicadores ===
+def calculate_rsi(series, period=14):
+    delta = series.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(window=period).mean()
+    avg_loss = loss.rolling(window=period).mean()
+    rs = avg_gain / avg_loss
+    return 100 - (100 / (1 + rs))
 
-# Indicadores técnicos
-rsi = df['close'].diff().apply(lambda x: max(x, 0)).rolling(14).mean() / \
-      df['close'].diff().abs().rolling(14).mean() * 100
-macd_line = df['close'].ewm(span=12).mean() - df['close'].ewm(span=26).mean()
-bb_middle = df['close'].rolling(20).mean()
-bb_std = df['close'].rolling(20).std()
-bb_upper = bb_middle + 2 * bb_std
-bb_lower = bb_middle - 2 * bb_std
+def calculate_macd(series, fast=12, slow=26, signal=9):
+    exp1 = series.ewm(span=fast, adjust=False).mean()
+    exp2 = series.ewm(span=slow, adjust=False).mean()
+    macd = exp1 - exp2
+    signal_line = macd.ewm(span=signal, adjust=False).mean()
+    return macd, signal_line
 
-# Últimos valores
-last_price = df['close'].iloc[-1]
-prev_price = df['close'].iloc[-2]
-price_change = ((last_price - prev_price) / prev_price) * 100
-last_rsi = rsi.iloc[-1]
-last_macd = macd_line.iloc[-1]
-last_bb_upper = bb_upper.iloc[-1]
-last_bb_lower = bb_lower.iloc[-1]
+def calculate_bollinger(series, window=20, num_std=2):
+    sma = series.rolling(window=window).mean()
+    std = series.rolling(window=window).std()
+    upper_band = sma + num_std * std
+    lower_band = sma - num_std * std
+    return upper_band, sma, lower_band
 
-# Painel superior
+# === App Streamlit ===
 st.set_page_config(layout="wide")
 st.title("📊 Painel Bitget - Futuros BTC/USDT (1H)")
-st.markdown(f"🕒 Atualizado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
-col1, col2, col3, col4, col5 = st.columns(5)
-col1.metric("Preço Atual", f"${last_price:,.2f}")
-col2.metric("Variação 1H", f"{price_change:+.2f}%")
-col3.metric("RSI (14)", f"{last_rsi:.2f}")
-col4.metric("MACD", f"{last_macd:.2f}")
-col5.metric("Bollinger", f"{last_bb_lower:.2f} – {last_bb_upper:.2f}")
+# Atualização
+st.markdown(f"🕒 Atualizado em: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
 
-# Gráfico interativo
-fig = go.Figure()
+# === Carregar dados da API ===
+df = fetch_bitget_candles()
 
-fig.add_trace(go.Candlestick(
-    x=df.index,
-    open=df['open'],
-    high=df['high'],
-    low=df['low'],
-    close=df['close'],
-    name="Candles"
-))
+if df.empty:
+    st.error("Erro ao carregar dados da API Bitget.")
+else:
+    # === Indicadores ===
+    rsi = calculate_rsi(df["close"])
+    macd_line, signal_line = calculate_macd(df["close"])
+    upper_bb, mid_bb, lower_bb = calculate_bollinger(df["close"])
 
-fig.add_trace(go.Scatter(x=df.index, y=bb_upper, name='BB Superior',
-                         line=dict(color='blue', dash='dot')))
-fig.add_trace(go.Scatter(x=df.index, y=bb_middle, name='BB Média',
-                         line=dict(color='blue')))
-fig.add_trace(go.Scatter(x=df.index, y=bb_lower, name='BB Inferior',
-                         line=dict(color='red', dash='dot')))
+    # === Exibir Card superior ===
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.metric("Preço Atual", f"${df['close'].iloc[-1]:,.2f}")
+    with col2:
+        pct_change = ((df["close"].iloc[-1] - df["close"].iloc[-2]) / df["close"].iloc[-2]) * 100
+        st.metric("Variação 1H", f"{pct_change:.2f}%", delta=f"{pct_change:.2f}%")
+    with col3:
+        st.metric("RSI", f"{rsi.iloc[-1]:.2f}")
+    with col4:
+        st.metric("MACD", f"{macd_line.iloc[-1] - signal_line.iloc[-1]:.2f}")
+    with col5:
+        st.metric("BB Inferior", f"{lower_bb.iloc[-1]:,.2f}")
 
-fig.update_layout(
-    title="BTC/USDT (1H) com Bollinger Bands",
-    xaxis_title="Data",
-    yaxis_title="Preço",
-    hovermode="x unified",
-    xaxis_rangeslider_visible=False
-)
+    # === Gráfico interativo ===
+    fig = go.Figure()
 
-st.plotly_chart(fig, use_container_width=True)
+    fig.add_trace(go.Candlestick(
+        x=df["timestamp"],
+        open=df["open"], high=df["high"],
+        low=df["low"], close=df["close"],
+        name="Candles"
+    ))
+
+    fig.add_trace(go.Scatter(x=df["timestamp"], y=upper_bb, mode="lines", name="BB Superior", line=dict(dash="dot")))
+    fig.add_trace(go.Scatter(x=df["timestamp"], y=mid_bb, mode="lines", name="BB Média"))
+    fig.add_trace(go.Scatter(x=df["timestamp"], y=lower_bb, mode="lines", name="BB Inferior", line=dict(dash="dot")))
+
+    fig.update_layout(
+        title="BTC/USDT (1H) com Bollinger Bands",
+        xaxis_title="Hora",
+        yaxis_title="Preço",
+        xaxis_rangeslider_visible=False,
+        hovermode="x unified"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
