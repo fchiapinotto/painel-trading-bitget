@@ -7,7 +7,7 @@ import datetime
 
 # === Função para obter candles diretamente da API da Bitget ===
 def fetch_bitget_candles(symbol="BTCUSDT_UMCBL", interval="60", limit=100):
-    url = f"https://api.bitget.com/api/mix/v1/market/candles?symbol={symbol}&granularity={interval}&limit={limit}&productType=umcbl"
+    url = f"https://api.bitget.com/api/mix/v1/market/candles?symbol={symbol}&granularity={interval}&limit={limit}"
     response = requests.get(url)
     if response.status_code == 200:
         data = response.json()["data"]
