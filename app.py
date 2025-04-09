@@ -60,7 +60,7 @@ try:
             yaxis_title="Preço",
             xaxis_rangeslider_visible=False,
             xaxis=dict(
-                tickformat="%H:%M",
+                tickformat="%d/%m %H:00"),
                 showgrid=True,
                 showline=True
             ),
