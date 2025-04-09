@@ -1,5 +1,5 @@
 
-mport streamlit as st
+import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import requests
@@ -84,4 +84,30 @@ try:
             hovertemplate="<b>%{x|%d/%m %Hh}</b><br>🔼 Máx: %{y}<br>🔽 Mín: %{y}<br>"
         ))
 
-        fig.add_trace(go.Scatter(x=df_filtered["timestamp"], y=df_filtered["upper"], mode="lines
+        fig.add_trace(go.Scatter(x=df_filtered["timestamp"], y=df_filtered["upper"], mode="lines", name="BB Sup",
+                                 line=dict(color="blue", dash="dot")))
+        fig.add_trace(go.Scatter(x=df_filtered["timestamp"], y=df_filtered["ma20"], mode="lines", name="BB Média",
+                                 line=dict(color="blue")))
+        fig.add_trace(go.Scatter(x=df_filtered["timestamp"], y=df_filtered["lower"], mode="lines", name="BB Inf",
+                                 line=dict(color="red", dash="dot")))
+
+        fig.update_layout(
+            title="BTC/USDT - Candlestick 1H + Bollinger Bands (Últimas 48h)",
+            xaxis_title="Hora",
+            yaxis_title="Preço",
+            xaxis_rangeslider_visible=False,
+            xaxis=dict(
+                tickformat="%d/%m %Hh",
+                showgrid=True,
+                showline=True
+            ),
+            hovermode="x unified"
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
+
+    else:
+        st.error("Erro ao carregar dados da API Bitget.")
+
+except Exception as e:
+    st.error(f"Erro de execução: {e}")
