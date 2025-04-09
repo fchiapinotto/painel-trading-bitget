@@ -76,6 +76,11 @@ try:
         yaxis_title="Preço",
         xaxis_rangeslider_visible=False,
         hovermode="x unified"
+        xaxis=dict(
+                tickformat="%H:%M",
+                showgrid=True,
+                showline=True
+            ),
     )
 
     st.plotly_chart(fig, use_container_width=True)
