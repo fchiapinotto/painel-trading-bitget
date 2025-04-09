@@ -64,7 +64,7 @@ try:
                 showgrid=True,
                 showline=True
             ),
-            hovermode="x unified"
+            hovermode="x unified",
         )
 
         st.plotly_chart(fig, use_container_width=True)
