@@ -15,7 +15,7 @@ url = "https://api.bitget.com/api/v2/mix/market/candles"
 params = {
     "symbol": "BTCUSDT",
     "productType": "USDT-FUTURES",
-    "granularity": "60",
+    "granularity": "1H",
     "limit": 100
 }
 
