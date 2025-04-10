@@ -17,7 +17,7 @@ st.markdown("""
         padding: 30px 0 10px;
         text-align: center;
         background: #f9f9f9;
-        height: 160px;
+        height: 158px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -28,7 +28,7 @@ st.markdown("""
         margin-bottom: 10px;
     }
     .card-var {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
         padding: 5px 10px;
         border-radius: 6px;
@@ -45,6 +45,7 @@ st.markdown("""
     }
     th {
         background-color: #f0f0f0;
+        header-align: center;
         text-align: center;
         padding: 10px;
     }
@@ -136,7 +137,7 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
     var_class = "var-up" if var_pct > 0 else "var-down" if var_pct < 0 else "var-neutral"
     var_icon = "🔼" if var_pct > 0 else "🔽" if var_pct < 0 else "➖"
 
-    colA, colB = st.columns([1.1, 2])
+    colA, colB = st.columns([0.8 , 2])
 
     with colA:
         st.markdown("<div class='titulo-secao'>💰 BTC Agora</div>", unsafe_allow_html=True)
