@@ -14,12 +14,30 @@ st.markdown("""
     }
     .card-btc {
         border: 2px solid #ccc;
-        padding: 40px 0;
+        padding: 30px 0 10px;
         text-align: center;
-        font-size: 38px;
         background: #f9f9f9;
-        height: 180px;
+        height: 220px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
+    .card-preco {
+        font-size: 48px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    .card-var {
+        font-size: 20px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 6px;
+        display: inline-block;
+    }
+    .var-up { color: green; }
+    .var-down { color: red; }
+    .var-neutral { color: orange; }
+
     table {
         width: 100%;
         font-size: 16px;
@@ -94,19 +112,14 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         prev = df.iloc[-2]
         var = ((last["close"] - prev["close"]) / prev["close"]) * 100
         trend_icon = "🔼" if var > 0 else "🔽" if var < 0 else "➖"
-        trend_color = "green" if var > 0 else "red" if var < 0 else "orange"
+        trend_class = "var-up" if var > 0 else "var-down" if var < 0 else "var-neutral"
         macd_val = last["macd"] - last["signal"]
         macd_icon = "📈" if macd_val > 0 else "📉" if macd_val < 0 else "⏸️"
         rsi_val = last["rsi"]
-        if rsi_val > 70:
-            rsi_icon = "🟢"
-        elif rsi_val < 30:
-            rsi_icon = "🔴"
-        else:
-            rsi_icon = "🟡"
+        rsi_icon = "🟢" if rsi_val > 70 else "🔴" if rsi_val < 30 else "🟡"
         bb_range = f"{last['lower']:,.0f} – {last['upper']:,.0f}"
         return (
-            f"{trend_icon} <span style='color:{trend_color}'>{var:.2f}%</span>",
+            f"{trend_icon} <span class='{trend_class}'>{var:.2f}%</span>",
             f"{macd_icon} {macd_val:.2f}",
             f"{rsi_icon} {rsi_val:.1f}",
             bb_range
@@ -116,13 +129,23 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
     v4h, m4h, r4h, b4h = extract_info(df_4h)
     v1h, m1h, r1h, b1h = extract_info(df_1h)
 
-    # BLOCO SUPERIOR: COTAÇÃO + TABELA
+    # BLOCO SUPERIOR
     last_price = df_1h["close"].iloc[-1]
+    prev_price = df_1h["close"].iloc[-2]
+    var_pct = ((last_price - prev_price) / prev_price) * 100
+    var_class = "var-up" if var_pct > 0 else "var-down" if var_pct < 0 else "var-neutral"
+    var_icon = "🔼" if var_pct > 0 else "🔽" if var_pct < 0 else "➖"
+
     colA, colB = st.columns([1.1, 2])
 
     with colA:
         st.markdown("<div class='titulo-secao'>💰 BTC Agora</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='card-btc'>${last_price:,.2f}</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='card-btc'>
+            <div class='card-preco'>${last_price:,.0f}</div>
+            <div class='card-var {var_class}'>{var_icon} {var_pct:.2f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with colB:
         st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
@@ -162,7 +185,7 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         yaxis_title="Preço",
         xaxis=dict(tickformat="%d/%m %Hh"),
         hovermode="x unified",
-        height=500  # ← altura aumentada
+        height=500
     )
 
     st.plotly_chart(fig, use_container_width=True)
