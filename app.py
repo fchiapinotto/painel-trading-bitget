@@ -17,7 +17,7 @@ st.markdown("""
         padding: 30px 0 10px;
         text-align: center;
         background: #f9f9f9;
-        height: 180px;
+        height: 160px;
         display: flex;
         flex-direction: column;
         justify-content: center;
