@@ -24,7 +24,7 @@ st.markdown("""
     }
     .card-preco {
         font-size: 52px;
-        font-weight: bold;
+        
      
     }
     .card-var {
