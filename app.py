@@ -25,7 +25,7 @@ st.markdown("""
     .card-preco {
         font-size: 52px;
         font-weight: bold;
-        margin-bottom: 1px;
+     
     }
     .card-var {
         font-size: 22px;
@@ -33,7 +33,7 @@ st.markdown("""
         padding: 5px 10px;
         border-radius: 6px;
         display: inline-block;
-        margin-bottom: 22px;
+        margin-bottom: 50px;
 
     }
     .var-up { color: green; }
