@@ -64,15 +64,22 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         var = ((last["close"] - prev["close"]) / prev["close"]) * 100
         trend_icon = "🔼" if var > 0 else "🔽" if var < 0 else "➖"
         trend_color = "green" if var > 0 else "red" if var < 0 else "orange"
-        macd = "📈 Alta" if last["macd"] > last["signal"] else "📉 Baixa" if last["macd"] < last["signal"] else "⏸️ Neutro"
-        if last["rsi"] > 70:
-            rsi = "🟢 Sobrecompra"
-        elif last["rsi"] < 30:
-            rsi = "🔴 Sobrevenda"
+        macd_val = last["macd"] - last["signal"]
+        macd_icon = "📈" if macd_val > 0 else "📉" if macd_val < 0 else "⏸️"
+        rsi_val = last["rsi"]
+        if rsi_val > 70:
+            rsi_icon = "🟢"
+        elif rsi_val < 30:
+            rsi_icon = "🔴"
         else:
-            rsi = "🟡 Neutro"
-        bb_range = f"{last['lower']:.0f} – {last['upper']:.0f}"
-        return f"{trend_icon} <span style='color:{trend_color}'>{var:.2f}%</span>", macd, rsi, bb_range
+            rsi_icon = "🟡"
+        bb_range = f"{last['lower']:,.0f} – {last['upper']:,.0f}"
+        return (
+            f"{trend_icon} <span style='color:{trend_color}'>{var:.2f}%</span>",
+            f"{macd_icon} {macd_val:.2f}",
+            f"{rsi_icon} {rsi_val:.1f}",
+            bb_range
+        )
 
     v1d, m1d, r1d, b1d = extract_info(df_1d)
     v4h, m4h, r4h, b4h = extract_info(df_4h)
@@ -80,18 +87,23 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
 
     # BLOCO SUPERIOR: COTAÇÃO + TABELA
     last_price = df_1h["close"].iloc[-1]
-    colA, colB = st.columns([1, 2])
+    colA, colB = st.columns([1.3, 2])
 
     with colA:
-        st.markdown("### 💰 BTC Agora")
-        st.metric("Preço Atual", f"${last_price:,.2f}")
+        st.markdown("""
+            <div style='font-size:26px; font-weight:bold; margin-bottom:10px;'>💰 BTC Agora</div>
+            <div style='border:2px solid #ccc; padding:30px 0; text-align:center; font-size:42px; background:#f9f9f9;'>
+                $ {:,.2f}
+            </div>
+        """.format(last_price), unsafe_allow_html=True)
 
     with colB:
         st.markdown("### 📊 Indicadores Técnicos")
         st.markdown("""
         <style>
-        table {width: 100%; font-size: 16px;}
-        th, td {text-align: center; padding: 6px;}
+        table {width: 100%; font-size: 16px; border-collapse: collapse;}
+        th, td {text-align: center; padding: 10px;}
+        th {background-color: #f0f0f0;}
         </style>
         """, unsafe_allow_html=True)
         st.markdown(f"""
