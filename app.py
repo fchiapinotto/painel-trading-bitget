@@ -6,6 +6,37 @@ from datetime import datetime
 
 # Configuração da página
 st.set_page_config(page_title="Painel BTC/USDT", layout="wide")
+
+st.markdown("""
+    <style>
+    .titulo-secao {
+        font-size: 28px; font-weight: bold; margin-bottom: 10px;
+    }
+    .card-btc {
+        border: 2px solid #ccc;
+        padding: 40px 0;
+        text-align: center;
+        font-size: 38px;
+        background: #f9f9f9;
+        height: 180px;
+    }
+    table {
+        width: 100%;
+        font-size: 16px;
+        border-collapse: collapse;
+    }
+    th {
+        background-color: #f0f0f0;
+        text-align: center;
+        padding: 10px;
+    }
+    td {
+        text-align: center;
+        padding: 10px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("📈 Painel Bitget - Futuros BTC/USDT")
 st.caption(f"🕒 Atualizado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} (GMT-3)")
 
@@ -87,25 +118,14 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
 
     # BLOCO SUPERIOR: COTAÇÃO + TABELA
     last_price = df_1h["close"].iloc[-1]
-    colA, colB = st.columns([1.3, 2])
+    colA, colB = st.columns([1.1, 2])
 
     with colA:
-        st.markdown("""
-            <div style='font-size:26px; font-weight:bold; margin-bottom:10px;'>💰 BTC Agora</div>
-            <div style='border:2px solid #ccc; padding:30px 0; text-align:center; font-size:42px; background:#f9f9f9;'>
-                $ {:,.2f}
-            </div>
-        """.format(last_price), unsafe_allow_html=True)
+        st.markdown("<div class='titulo-secao'>💰 BTC Agora</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='card-btc'>${last_price:,.2f}</div>", unsafe_allow_html=True)
 
     with colB:
-        st.markdown("### 📊 Indicadores Técnicos")
-        st.markdown("""
-        <style>
-        table {width: 100%; font-size: 16px; border-collapse: collapse;}
-        th, td {text-align: center; padding: 10px;}
-        th {background-color: #f0f0f0;}
-        </style>
-        """, unsafe_allow_html=True)
+        st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
         st.markdown(f"""
         <table>
         <tr><th>Timeframe</th><th>Variação %</th><th>MACD</th><th>RSI</th><th>Bollinger</th></tr>
@@ -136,11 +156,13 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
                              line=dict(color="red", dash="dot")))
 
     fig.update_layout(
-        title="📉 BTC/USDT - Últimas 48 horas",
+        title="<b>📉 BTC/USDT - Últimas 48 horas</b>",
+        title_font_size=24,
         xaxis_title="Horário",
         yaxis_title="Preço",
         xaxis=dict(tickformat="%d/%m %Hh"),
-        hovermode="x unified"
+        hovermode="x unified",
+        height=500  # ← altura aumentada
     )
 
     st.plotly_chart(fig, use_container_width=True)
