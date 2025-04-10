@@ -33,6 +33,8 @@ st.markdown("""
         padding: 5px 10px;
         border-radius: 6px;
         display: inline-block;
+        margin-top: 4px;
+
     }
     .var-up { color: green; }
     .var-down { color: red; }
