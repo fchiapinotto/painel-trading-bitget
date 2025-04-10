@@ -23,12 +23,12 @@ st.markdown("""
         justify-content: center;
     }
     .card-preco {
-        font-size: 48px;
+        font-size: 52px;
         font-weight: bold;
         margin-bottom: 10px;
     }
     .card-var {
-        font-size: 18px;
+        font-size: 22px;
         font-weight: 600;
         padding: 5px 10px;
         border-radius: 6px;
