@@ -3,8 +3,12 @@ import pandas as pd
 import plotly.graph_objects as go
 import requests
 from datetime import datetime
+import openai
 
-# Configuração da página
+# === Carregar chave da OpenAI do secrets
+openai.api_key = st.secrets["openai_api_key"]
+
+# === Configuração da página
 st.set_page_config(page_title="Painel BTC/USDT", layout="wide")
 
 st.markdown("""
@@ -24,8 +28,6 @@ st.markdown("""
     }
     .card-preco {
         font-size: 52px;
-        
-     
     }
     .card-var {
         font-size: 22px;
@@ -34,12 +36,10 @@ st.markdown("""
         border-radius: 6px;
         display: inline-block;
         margin-bottom: 25px;
-
     }
     .var-up { color: green; }
     .var-down { color: red; }
     .var-neutral { color: orange; }
-
     table {
         width: 100%;
         font-size: 16px;
@@ -47,7 +47,6 @@ st.markdown("""
     }
     th {
         background-color: #f0f0f0;
-        header-align: center;
         text-align: center;
         padding: 10px;
     }
@@ -61,7 +60,7 @@ st.markdown("""
 st.title("📈 Painel Bitget - Futuros BTC/USDT")
 st.caption(f"🕒 Atualizado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} (GMT-3)")
 
-# === Função para buscar e processar candles ===
+# === Consulta candles e indicadores
 def fetch_and_process_candles(granularity="1H", limit=100):
     url = "https://api.bitget.com/api/v2/mix/market/candles"
     params = {
@@ -74,25 +73,21 @@ def fetch_and_process_candles(granularity="1H", limit=100):
     data = response.json()
     if data["code"] != "00000":
         return None
-
     df = pd.DataFrame(data["data"], columns=["timestamp", "open", "high", "low", "close", "volume", "quote_volume"])
     df = df.astype({"timestamp": "int64", "open": "float", "high": "float", "low": "float", "close": "float"})
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True).dt.tz_convert("America/Sao_Paulo")
     df.sort_values("timestamp", inplace=True)
     return df
 
-# === Função para calcular indicadores técnicos ===
 def compute_indicators(df):
     df["ma20"] = df["close"].rolling(window=20).mean()
     df["std"] = df["close"].rolling(window=20).std()
     df["upper"] = df["ma20"] + 2 * df["std"]
     df["lower"] = df["ma20"] - 2 * df["std"]
-
     ema12 = df["close"].ewm(span=12, adjust=False).mean()
     ema26 = df["close"].ewm(span=26, adjust=False).mean()
     df["macd"] = ema12 - ema26
     df["signal"] = df["macd"].ewm(span=9, adjust=False).mean()
-
     delta = df["close"].diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
@@ -100,10 +95,8 @@ def compute_indicators(df):
     avg_loss = loss.rolling(window=14).mean()
     rs = avg_gain / avg_loss
     df["rsi"] = 100 - (100 / (1 + rs))
-
     return df
 
-# === Consultar dados ===
 df_1h = compute_indicators(fetch_and_process_candles("1H", 100))
 df_4h = compute_indicators(fetch_and_process_candles("4H", 100))
 df_1d = compute_indicators(fetch_and_process_candles("1D", 100))
@@ -140,7 +133,6 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
     var_icon = "🔼" if var_pct > 0 else "🔽" if var_pct < 0 else "➖"
 
     colA, colB = st.columns([0.8 , 2])
-
     with colA:
         st.markdown("<div class='titulo-secao'>💰 BTC Agora</div>", unsafe_allow_html=True)
         st.markdown(f"""
@@ -149,7 +141,6 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
             <div class='card-var {var_class}'>{var_icon} {var_pct:.2f}%</div>
         </div>
         """, unsafe_allow_html=True)
-
     with colB:
         st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
         st.markdown(f"""
@@ -161,26 +152,17 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         </table>
         """, unsafe_allow_html=True)
 
-    # GRÁFICO DE 1H
+    # GRÁFICO
     df_48h = df_1h[-48:]
     fig = go.Figure()
-
-    fig.add_trace(go.Candlestick(
-        x=df_48h["timestamp"],
-        open=df_48h["open"],
-        high=df_48h["high"],
-        low=df_48h["low"],
-        close=df_48h["close"],
-        name="Candles"
-    ))
-
+    fig.add_trace(go.Candlestick(x=df_48h["timestamp"], open=df_48h["open"], high=df_48h["high"],
+                                 low=df_48h["low"], close=df_48h["close"], name="Candles"))
     fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["upper"], mode="lines", name="BB Superior",
                              line=dict(color="blue", dash="dot")))
     fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["ma20"], mode="lines", name="BB Média",
                              line=dict(color="blue")))
     fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["lower"], mode="lines", name="BB Inferior",
                              line=dict(color="red", dash="dot")))
-
     fig.update_layout(
         title="<b>📉 BTC/USDT - Últimas 48 horas</b>",
         title_font_size=24,
@@ -190,8 +172,42 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         hovermode="x unified",
         height=500
     )
-
     st.plotly_chart(fig, use_container_width=True)
+
+    # ANÁLISE ESPECIALISTA
+    st.markdown("<div class='titulo-secao'>📋 Análise de Especialista – Crypto Trade Analyst</div>", unsafe_allow_html=True)
+
+    if st.button("🔍 Gerar Análise Técnica"):
+        prompt = f"""
+Você é um especialista em trading de futuros de criptomoedas. Com base nos dados técnicos abaixo (extraídos de um painel analítico de BTC/USDT), forneça uma análise clara e objetiva sobre:
+
+1. A tendência atual do BTC
+2. Sinais de força ou fraqueza no mercado
+3. Padrões técnicos observados
+4. Oportunidades e riscos para investidores de curto e médio prazo
+
+Indicadores Técnicos (últimos valores):
+- Preço atual: ${last_price:,.0f}
+- Variação 1H: {var_pct:.2f}%
+- MACD 1H: {df_1h['macd'].iloc[-1]:.2f} | Sinal: {df_1h['signal'].iloc[-1]:.2f}
+- RSI 1H: {df_1h['rsi'].iloc[-1]:.1f}
+- Bollinger: Inferior = {df_1h['lower'].iloc[-1]:,.0f}, Superior = {df_1h['upper'].iloc[-1]:,.0f}
+
+Seja claro, conciso e didático para iniciantes.
+"""
+        with st.spinner("Gerando análise..."):
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "Você é um analista técnico de criptomoedas especialista em futuros."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.7,
+                max_tokens=700
+            )
+            output = response.choices[0].message.content
+            st.success("✅ Análise gerada com sucesso!")
+            st.markdown(f"<div style='background:#f9f9f9; padding:20px; border-radius:10px'>{output}</div>", unsafe_allow_html=True)
 
 else:
     st.error("❌ Erro ao carregar dados da API Bitget.")
