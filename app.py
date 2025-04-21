@@ -5,13 +5,13 @@ import requests
 from datetime import datetime
 import openai
 
-
 # === Carregar chave da OpenAI do secrets
 openai.api_key = st.secrets["openai"]["openai_api_key"]
 
 # === Configuração da página
 st.set_page_config(page_title="Painel BTC/USDT", layout="wide")
 
+# === Estilos
 st.markdown("""
     <style>
     .titulo-secao {
@@ -75,20 +75,25 @@ def fetch_and_process_candles(granularity="1H", limit=100):
     if data["code"] != "00000":
         return None
     df = pd.DataFrame(data["data"], columns=["timestamp", "open", "high", "low", "close", "volume", "quote_volume"])
-    df = df.astype({"timestamp": "int64", "open": "float", "high": "float", "low": "float", "close": "float"})
+    df = df.astype({"timestamp": "int64", "open": "float", "high": "float", "low": "float", "close": "float", "volume": "float"})
     df["timestamp"] = pd.to_datetime(df["timestamp"], unit="ms", utc=True).dt.tz_convert("America/Sao_Paulo")
     df.sort_values("timestamp", inplace=True)
     return df
 
+# === Indicadores Técnicos
 def compute_indicators(df):
     df["ma20"] = df["close"].rolling(window=20).mean()
     df["std"] = df["close"].rolling(window=20).std()
     df["upper"] = df["ma20"] + 2 * df["std"]
     df["lower"] = df["ma20"] - 2 * df["std"]
+
+    # MACD
     ema12 = df["close"].ewm(span=12, adjust=False).mean()
     ema26 = df["close"].ewm(span=26, adjust=False).mean()
     df["macd"] = ema12 - ema26
     df["signal"] = df["macd"].ewm(span=9, adjust=False).mean()
+
+    # RSI
     delta = df["close"].diff()
     gain = delta.where(delta > 0, 0)
     loss = -delta.where(delta < 0, 0)
@@ -96,45 +101,76 @@ def compute_indicators(df):
     avg_loss = loss.rolling(window=14).mean()
     rs = avg_gain / avg_loss
     df["rsi"] = 100 - (100 / (1 + rs))
+
+    # SMA 50/200
+    df["sma50"] = df["close"].rolling(window=50).mean()
+    df["sma200"] = df["close"].rolling(window=200).mean()
+    df["golden_cross"] = (df["sma50"] > df["sma200"])
+
+    # ADX
+    high = df["high"]
+    low = df["low"]
+    close = df["close"]
+    plus_dm = high.diff()
+    minus_dm = low.diff()
+    tr = pd.concat([high - low, (high - close.shift()).abs(), (low - close.shift()).abs()], axis=1).max(axis=1)
+    atr = tr.rolling(14).mean()
+    plus_di = 100 * (plus_dm.rolling(14).mean() / atr)
+    minus_di = 100 * (minus_dm.rolling(14).mean() / atr)
+    dx = (abs(plus_di - minus_di) / (plus_di + minus_di)) * 100
+    df["adx"] = dx.rolling(14).mean()
+
     return df
 
-# Coleta e cálculo
-df_1h = compute_indicators(fetch_and_process_candles("1H", 100))
-df_4h = compute_indicators(fetch_and_process_candles("4H", 100))
-df_1d = compute_indicators(fetch_and_process_candles("1D", 100))
+# Coleta e cálculo dos dados
+df_1h = compute_indicators(fetch_and_process_candles("1H"))
+df_4h = compute_indicators(fetch_and_process_candles("4H"))
+df_1d = compute_indicators(fetch_and_process_candles("1D"))
+
+# Função resumo com ícones e legendas
+def extract_info(df):
+    last = df.iloc[-1]
+    prev = df.iloc[-2]
+    var = ((last["close"] - prev["close"]) / prev["close"]) * 100
+    trend_icon = "🔼" if var > 0 else "🔽" if var < 0 else "➖"
+    trend_class = "var-up" if var > 0 else "var-down" if var < 0 else "var-neutral"
+    macd_val = last["macd"] - last["signal"]
+    macd_icon = "📈" if macd_val > 0 else "📉" if macd_val < 0 else "⏸️"
+    rsi_val = last["rsi"]
+    rsi_icon = "🟢" if rsi_val > 70 else "🔴" if rsi_val < 30 else "🟡"
+    bb = f"{last['lower']:,.0f} – {last['upper']:,.0f}"
+    bb_icon = "🟦" if last["close"] > last["upper"] else "🟥" if last["close"] < last["lower"] else "🟨"
+    cross_icon = "💰 Crz. Alta" if last["golden_cross"] else "💀 Crz. Baixa"
+    adx_icon = "🔥" if last["adx"] > 25 else "💤"
+    volume_icon = f"{last['volume']:,.0f}"
+    support = df["low"].min()
+    resistance = df["high"].max()
+    sr_icon = "🧱" if last["close"] <= support else "🪟" if last["close"] >= resistance else "〰️"
+    return (
+        f"{trend_icon} <span class='{trend_class}'>{var:.2f}%</span>",
+        f"{macd_icon} {macd_val:.2f}",
+        f"{rsi_icon} {rsi_val:.1f}",
+        f"{bb_icon} {bb}",
+        f"{adx_icon} {last['adx']:.1f}",
+        f"{cross_icon}",
+        sr_icon,
+        volume_icon
+    )
 
 if df_1h is not None and df_4h is not None and df_1d is not None:
+    # Coleta dados formatados
+    i1d = extract_info(df_1d)
+    i4h = extract_info(df_4h)
+    i1h = extract_info(df_1h)
 
-    def extract_info(df):
-        last = df.iloc[-1]
-        prev = df.iloc[-2]
-        var = ((last["close"] - prev["close"]) / prev["close"]) * 100
-        trend_icon = "🔼" if var > 0 else "🔽" if var < 0 else "➖"
-        trend_class = "var-up" if var > 0 else "var-down" if var < 0 else "var-neutral"
-        macd_val = last["macd"] - last["signal"]
-        macd_icon = "📈" if macd_val > 0 else "📉" if macd_val < 0 else "⏸️"
-        rsi_val = last["rsi"]
-        rsi_icon = "🟢" if rsi_val > 70 else "🔴" if rsi_val < 30 else "🟡"
-        bb_range = f"{last['lower']:,.0f} – {last['upper']:,.0f}"
-        return (
-            f"{trend_icon} <span class='{trend_class}'>{var:.2f}%</span>",
-            f"{macd_icon} {macd_val:.2f}",
-            f"{rsi_icon} {rsi_val:.1f}",
-            bb_range
-        )
-
-    v1d, m1d, r1d, b1d = extract_info(df_1d)
-    v4h, m4h, r4h, b4h = extract_info(df_4h)
-    v1h, m1h, r1h, b1h = extract_info(df_1h)
-
-    # BLOCO SUPERIOR
     last_price = df_1h["close"].iloc[-1]
     prev_price = df_1h["close"].iloc[-2]
     var_pct = ((last_price - prev_price) / prev_price) * 100
     var_class = "var-up" if var_pct > 0 else "var-down" if var_pct < 0 else "var-neutral"
     var_icon = "🔼" if var_pct > 0 else "🔽" if var_pct < 0 else "➖"
 
-    colA, colB = st.columns([0.8 , 2])
+    # === Bloco Superior
+    colA, colB = st.columns([0.8, 2])
     with colA:
         st.markdown("<div class='titulo-secao'>💰 BTC Agora</div>", unsafe_allow_html=True)
         st.markdown(f"""
@@ -147,89 +183,61 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
         st.markdown(f"""
         <table>
-        <tr><th>Timeframe</th><th>Variação %</th><th>MACD</th><th>RSI</th><th>Bollinger</th></tr>
-        <tr><td>1D</td><td>{v1d}</td><td>{m1d}</td><td>{r1d}</td><td>{b1d}</td></tr>
-        <tr><td>4H</td><td>{v4h}</td><td>{m4h}</td><td>{r4h}</td><td>{b4h}</td></tr>
-        <tr><td>1H</td><td>{v1h}</td><td>{m1h}</td><td>{r1h}</td><td>{b1h}</td></tr>
+        <tr><th>Timeframe</th><th>Variação</th><th>MACD</th><th>RSI</th><th>Bollinger</th><th>ADX</th><th>SMA 50/200</th><th>S/R</th><th>Volume</th></tr>
+        <tr><td>1D</td><td>{i1d[0]}</td><td>{i1d[1]}</td><td>{i1d[2]}</td><td>{i1d[3]}</td><td>{i1d[4]}</td><td>{i1d[5]}</td><td>{i1d[6]}</td><td>{i1d[7]}</td></tr>
+        <tr><td>4H</td><td>{i4h[0]}</td><td>{i4h[1]}</td><td>{i4h[2]}</td><td>{i4h[3]}</td><td>{i4h[4]}</td><td>{i4h[5]}</td><td>{i4h[6]}</td><td>{i4h[7]}</td></tr>
+        <tr><td>1H</td><td>{i1h[0]}</td><td>{i1h[1]}</td><td>{i1h[2]}</td><td>{i1h[3]}</td><td>{i1h[4]}</td><td>{i1h[5]}</td><td>{i1h[6]}</td><td>{i1h[7]}</td></tr>
         </table>
         """, unsafe_allow_html=True)
 
-    # GRÁFICO
+        st.markdown("""
+        🔎 **Legenda de Ícones**  
+        🔼/🔽: Tendência | 📈/📉: MACD | 🟢/🔴/🟡: RSI | 🟦/🟥: Bollinger |  
+        💰 Crz. Alta / 💀 Crz. Baixa: SMA | 🔥 Forte ADX / 💤 Fraco |  
+        🧱 Suporte / 🪟 Resistência / 〰️ Zona neutra
+        """)
+
+    # === Gráfico
     df_48h = df_1h[-48:]
     fig = go.Figure()
     fig.add_trace(go.Candlestick(x=df_48h["timestamp"], open=df_48h["open"], high=df_48h["high"],
-                                 low=df_48h["low"], close=df_48h["close"], name="Candles"))
-    fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["upper"], mode="lines", name="BB Superior",
-                             line=dict(color="blue", dash="dot")))
-    fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["ma20"], mode="lines", name="BB Média",
-                             line=dict(color="blue")))
-    fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["lower"], mode="lines", name="BB Inferior",
-                             line=dict(color="red", dash="dot")))
+                                 low=df_48h["low"], close=df_48h["close"]))
+    fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["upper"], mode="lines", name="BB Superior"))
+    fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["ma20"], mode="lines", name="BB Média"))
+    fig.add_trace(go.Scatter(x=df_48h["timestamp"], y=df_48h["lower"], mode="lines", name="BB Inferior"))
     fig.update_layout(
         title="<b>📉 BTC/USDT - Últimas 48 horas</b>",
-        title_font_size=24,
-        xaxis_title="Horário",
-        yaxis_title="Preço",
-        xaxis=dict(tickformat="%d/%m %Hh"),
-        hovermode="x unified",
-        height=500
+        xaxis_title="Horário", yaxis_title="Preço",
+        hovermode="x unified", height=500
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # ANÁLISE ESPECIALISTA
+    # === Análise GPT
     st.markdown("<div class='titulo-secao'>📋 Análise de Especialista – Crypto Trade Analyst</div>", unsafe_allow_html=True)
-
     if st.button("🔍 Gerar Análise Técnica"):
-        support_1h = df_1h["low"].min()
-        resistance_1h = df_1h["high"].max()
-        support_4h = df_4h["low"].min()
-        resistance_4h = df_4h["high"].max()
-        support_1d = df_1d["low"].min()
-        resistance_1d = df_1d["high"].max()
-
         prompt = f"""
-Você é um especialista em trading de futuros de criptomoedas. Com base nos indicadores técnicos abaixo, forneça uma análise concisa e clara, focada em:
+Você é um analista técnico especialista em futuros de criptomoedas. Sua missão é produzir uma análise objetiva, clara e profissional com base nos dados técnicos do par BTC/USDT, contemplando:
 
-✅ Tendência e sinais técnicos — visão geral do mercado com base em MACD, RSI, suporte e resistência nos três timeframes.
+1. 🎯 **Tendência e sinais técnicos** — descreva a direção do mercado e comportamento atual com base nos indicadores (MACD, RSI, Bollinger Bands, Suporte, Resistência, Volume, Médias Móveis e ADX). Identifique se há força, fraqueza ou indecisão.
 
-🚀 Oportunidades — bullet points destacando possíveis entradas em estratégias de grid trading ou rompimentos com base em padrões e indicadores técnicos.
+2. 🚀 **Oportunidades de Trading (foco em Grid e Breakout)** — destaque *até 2 oportunidades reais* com base nos dados apresentados. Informe a lógica técnica e os preços de referência (ex: zonas de entrada, rompimentos, retestes etc.).
 
-⚠️ Riscos — bullet points alertando sobre momentos de incerteza, consolidação ou regiões onde não é recomendada entrada, inclusive considerando falso rompimento ou sobrecompra/sobrevenda.
+3. ⚠️ **Riscos e Alertas Estratégicos** — elenque os principais riscos para entradas longas ou curtas. Alerte sobre condições como sobrecompra, falso rompimento, suporte fraco ou ausência de volume.
 
 📌 Preço atual: ${last_price:,.0f}
-
-🔸 Indicadores 1H:
-- MACD: {df_1h['macd'].iloc[-1]:.2f} | Sinal: {df_1h['signal'].iloc[-1]:.2f}
-- RSI: {df_1h['rsi'].iloc[-1]:.1f}
-- Suporte: {support_1h:,.0f}
-- Resistência: {resistance_1h:,.0f}
-
-🔸 Indicadores 4H:
-- MACD: {df_4h['macd'].iloc[-1]:.2f} | Sinal: {df_4h['signal'].iloc[-1]:.2f}
-- RSI: {df_4h['rsi'].iloc[-1]:.1f}
-- Suporte: {support_4h:,.0f}
-- Resistência: {resistance_4h:,.0f}
-
-🔸 Indicadores 1D:
-- MACD: {df_1d['macd'].iloc[-1]:.2f} | Sinal: {df_1d['signal'].iloc[-1]:.2f}
-- RSI: {df_1d['rsi'].iloc[-1]:.1f}
-- Suporte: {support_1d:,.0f}
-- Resistência: {resistance_1d:,.0f}
-"""
-
+        """
         with st.spinner("Gerando análise..."):
             response = openai.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "Você é um analista técnico de criptomoedas especialista em futuros. Seja direto, técnico, com tom confiante e evite linguagem genérica."},
+                    {"role": "system", "content": "Você é um analista técnico de criptomoedas especialista em futuros. Seja direto, técnico e objetivo."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.6,
+                temperature=0.5,
                 max_tokens=800
             )
             st.success("✅ Análise gerada com sucesso!")
             st.markdown(f"<div style='background:#f9f9f9;padding:20px;border-radius:10px'>{response.choices[0].message.content}</div>", unsafe_allow_html=True)
-
 
 else:
     st.error("❌ Erro ao carregar dados da API Bitget.")
