@@ -1,6 +1,6 @@
 import streamlit as st
 
-def aplicar_estilos():
+def set_custom_styles():
     st.markdown("""
         <style>
         .titulo-secao {
