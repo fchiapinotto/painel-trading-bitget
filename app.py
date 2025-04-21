@@ -186,15 +186,17 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         resistance_4h = df_4h["high"].max()
         support_1d = df_1d["low"].min()
         resistance_1d = df_1d["high"].max()
-        
-    prompt = f"""
-Você é um especialista em trading de futuros de criptomoedas. Com base nos indicadores técnicos abaixo, forneça uma análise concissa e clara, focada em:
 
-✅ Tendência e sinais técnicos - Visão geral do mercado, principais movimentos observados com base na análise técnica.
-🚀 Oportunidades - Trazer oportunidades em bullet points vinculado a momentos de entrada em grid trading futuros, cosiderando diferentes estratégias no curto prazo
-⚠️ Riscos - trazer riscos em bullet points vinculado a estratégias e movimentos que não devem ser tomadas no momento.
+        prompt = f"""
+Você é um especialista em trading de futuros de criptomoedas. Com base nos indicadores técnicos abaixo, forneça uma análise concisa e clara, focada em:
 
-📌 Preço atual: ${last_price:,.0f}  
+✅ Tendência e sinais técnicos — visão geral do mercado com base em MACD, RSI, suporte e resistência nos três timeframes.
+
+🚀 Oportunidades — bullet points destacando possíveis entradas em estratégias de grid trading ou rompimentos com base em padrões e indicadores técnicos.
+
+⚠️ Riscos — bullet points alertando sobre momentos de incerteza, consolidação ou regiões onde não é recomendada entrada, inclusive considerando falso rompimento ou sobrecompra/sobrevenda.
+
+📌 Preço atual: ${last_price:,.0f}
 
 🔸 Indicadores 1H:
 - MACD: {df_1h['macd'].iloc[-1]:.2f} | Sinal: {df_1h['signal'].iloc[-1]:.2f}
@@ -213,14 +215,13 @@ Você é um especialista em trading de futuros de criptomoedas. Com base nos ind
 - RSI: {df_1d['rsi'].iloc[-1]:.1f}
 - Suporte: {support_1d:,.0f}
 - Resistência: {resistance_1d:,.0f}
+"""
 
-
-        """
         with st.spinner("Gerando análise..."):
             response = openai.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "Você é um analista técnico de criptomoedas especialista em futuros."},
+                    {"role": "system", "content": "Você é um analista técnico de criptomoedas especialista em futuros. Seja direto, técnico, com tom confiante e evite linguagem genérica."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.6,
@@ -228,6 +229,7 @@ Você é um especialista em trading de futuros de criptomoedas. Com base nos ind
             )
             st.success("✅ Análise gerada com sucesso!")
             st.markdown(f"<div style='background:#f9f9f9;padding:20px;border-radius:10px'>{response.choices[0].message.content}</div>", unsafe_allow_html=True)
+
 
 else:
     st.error("❌ Erro ao carregar dados da API Bitget.")
