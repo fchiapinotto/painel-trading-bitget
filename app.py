@@ -175,44 +175,51 @@ if df_1h is not None:
         if refresh:
             st.session_state["last_update"] = datetime.now()
 
-               if "cached_analysis" not in st.session_state or (
-            datetime.now() - st.session_state["last_update"]).seconds > 900:
+if "last_update" not in st.session_state:
+    st.session_state["last_update"] = datetime.now()
 
-            def build_block(df, label):
-                last = df.iloc[-1]
-                macd = last["macd"]
-                signal = last["signal"]
-                rsi = last["rsi"]
-                upper = last["upper"]
-                lower = last["lower"]
-                adx = last["adx"]
-                sma50 = last["sma50"]
-                sma200 = last["sma200"]
-                suporte = df["low"].min()
-                resistencia = df["high"].max()
-                preco = last["close"]
-                variacao = ((last["close"] - df.iloc[-2]["close"]) / df.iloc[-2]["close"]) * 100
+if refresh:
+    st.session_state["last_update"] = datetime.now()
 
-                return f"""
+if "cached_analysis" not in st.session_state or (
+    datetime.now() - st.session_state["last_update"]).seconds > 900:
+
+    def build_block(df, label):
+        last = df.iloc[-1]
+        macd = last["macd"]
+        signal = last["signal"]
+        rsi = last["rsi"]
+        upper = last["upper"]
+        lower = last["lower"]
+        adx = last["adx"]
+        sma50 = last["sma50"]
+        sma200 = last["sma200"]
+        golden_cross = "Golden Cross" if last["sma50"] > last["sma200"] else "Death Cross"
+        suporte = df["low"].min()
+        resistencia = df["high"].max()
+        preco = last["close"]
+        variacao = ((last["close"] - df.iloc[-2]["close"]) / df.iloc[-2]["close"]) * 100
+
+        return f"""
 🔹 {label}:
-- Preço atual: ${preco:,.0f}
+- Preço: ${preco:,.0f}
 - Variação: {variacao:.2f}%
 - MACD: {macd:.2f} | Sinal: {signal:.2f}
 - RSI: {rsi:.1f}
-- Bollinger: Limites [${lower:,.0f} – ${upper:,.0f}]
+- Bollinger: ${lower:,.0f} – ${upper:,.0f}
 - ADX: {adx:.1f}
-- SMA 50: {sma50:,.0f} | SMA 200: {sma200:,.0f}
+- SMA 50: ${sma50:,.0f} | SMA 200: ${sma200:,.0f} ({golden_cross})
 - Suporte: ${suporte:,.0f} | Resistência: ${resistencia:,.0f}
 """
 
-            prompt = f"""
-Você é um analista técnico. Com base nos indicadores abaixo, forneça uma análise **resumida e clara** com foco em ajudar um investidor a entender se o momento atual oferece oportunidade ou exige cautela. Estruture sua resposta com 3 classificações:
+    prompt = f"""
+Você é um analista técnico de criptomoedas. Com base nas informações abaixo para os timeframes 1H, 4H e 1D, forneça uma análise clara, objetiva e embasada. A resposta deve conter:
 
-1. **Momentum**: atrativo / neutro / adverso – e sua leitura.
-2. **Tendência**: subida / descida / lateralizada – com justificativa técnica.
-3. **Confiança**: alto / médio / baixo – com base em ADX, volume e convergência dos timeframes.
+1. **Momentum**: atrativo / neutro / adverso — com justificativa técnica.
+2. **Tendência**: subida / descida / lateralizada — baseada em MACD, BB e SMA.
+3. **Confiança**: alto / médio / baixo — considerando ADX, consistência entre os timeframes e clareza de sinais.
 
-A análise deve ser objetiva, profissional e embasada tecnicamente.
+Evite repetições numéricas. Foque em interpretação e leitura técnica para orientar decisões de investimento.
 
 Indicadores:
 {build_block(df_1h, "1H")}
@@ -220,22 +227,25 @@ Indicadores:
 {build_block(df_1d, "1D")}
 """
 
-            response = openai.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "Você é um analista técnico profissional e direto."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.4,
-                max_tokens=700
-            )
-            st.session_state["cached_analysis"] = response.choices[0].message.content
+    response = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "Você é um analista técnico profissional e direto."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.4,
+        max_tokens=800
+    )
+    st.session_state["cached_analysis"] = response.choices[0].message.content
 
-        st.markdown(f"""
-        <div style='background:#f4f4f4;padding:15px;border-radius:8px; font-size:16px; line-height:1.6em;'>
-            {st.session_state["cached_analysis"]}
-        </div>
-        """, unsafe_allow_html=True)
+st.markdown(f"""
+<div style='background:#f4f4f4;padding:15px;border-radius:8px; font-size:16px; line-height:1.6em;'>
+    {st.session_state["cached_analysis"]}
+    <br><br>
+    <span style='font-size:12px;color:gray;'>🕒 Última atualização: {st.session_state["last_update"].strftime('%d/%m/%Y %H:%M:%S')}</span>
+</div>
+""", unsafe_allow_html=True)               
+
 
     # === Tabela técnica
     st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
