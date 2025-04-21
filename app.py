@@ -36,7 +36,7 @@ st.markdown("""
         padding: 5px 10px;
         border-radius: 6px;
         display: inline-block;
-        margin-bottom: 25px;
+        margin-bottom: 10px;
     }
     .var-up { color: green; }
     .var-down { color: red; }
@@ -58,9 +58,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("📈 Painel Bitget - Futuros BTC/USDT")
-st.caption(f"🕒 Atualizado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')} (GMT-3)")
-
-# === Coleta de candles
+# === Consulta candles
 def fetch_and_process_candles(granularity="1H", limit=100):
     url = "https://api.bitget.com/api/v2/mix/market/candles"
     params = {
@@ -79,7 +77,7 @@ def fetch_and_process_candles(granularity="1H", limit=100):
     df.sort_values("timestamp", inplace=True)
     return df
 
-# === Indicadores
+# === Indicadores Técnicos
 def compute_indicators(df):
     df["ma20"] = df["close"].rolling(20).mean()
     df["std"] = df["close"].rolling(20).std()
@@ -110,12 +108,11 @@ def compute_indicators(df):
     df["adx"] = dx.rolling(14).mean()
     return df
 
-# === Dados e indicadores
+# Coleta e cálculo dos dados
 df_1h = compute_indicators(fetch_and_process_candles("1H"))
 df_4h = compute_indicators(fetch_and_process_candles("4H"))
 df_1d = compute_indicators(fetch_and_process_candles("1D"))
-
-# === Função resumo
+# === Função resumo com ícones e dados
 def extract_info(df):
     last = df.iloc[-1]
     prev = df.iloc[-2]
@@ -132,7 +129,7 @@ def extract_info(df):
     sma_icon = "💰 Crz. Alta" if last["golden_cross"] else "💀 Crz. Baixa"
     support = df["low"].min()
     resistance = df["high"].max()
-    sr_icon = "🧱" if last["close"] <= support else "🪟" if last["close"] >= resistance else "〰️"
+    sr_icon = f"🧱 {support:,.0f}<br>🪟 {resistance:,.0f}"
     return (
         f"{trend_icon} <span class='{trend_class}'>{var:.2f}%</span>",
         f"{macd_icon} {macd_val:.2f}",
@@ -143,6 +140,7 @@ def extract_info(df):
         sr_icon
     )
 
+# === Cálculo e estruturação dos dados
 if df_1h is not None:
     i1d, i4h, i1h = extract_info(df_1d), extract_info(df_4h), extract_info(df_1h)
     last_price = df_1h["close"].iloc[-1]
@@ -150,9 +148,8 @@ if df_1h is not None:
     var_icon = "🔼" if var_pct > 0 else "🔽" if var_pct < 0 else "➖"
     var_class = "var-up" if var_pct > 0 else "var-down" if var_pct < 0 else "var-neutral"
 
-    # Bloco superior
-    col1, col2 = st.columns([1.2, 2.8])
-
+    # === Topo com preço e análise
+    col1, col2 = st.columns([1.2, 3])
     with col1:
         st.markdown("<div class='titulo-secao'>💰 BTC Agora</div>", unsafe_allow_html=True)
         st.markdown(f"""
@@ -160,36 +157,40 @@ if df_1h is not None:
                 <div class='card-preco'>${last_price:,.0f}</div>
                 <div class='card-var {var_class}'>{var_icon} {var_pct:.2f}%</div>
             </div>
-            <div style='text-align:right; font-size:12px; color:gray;'>🕒 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
+            <div style='text-align:right; font-size:12px; color:gray;'>🕒 Atualizado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
         """, unsafe_allow_html=True)
 
     with col2:
-        col_analyze_title, col_analyze_button = st.columns([8, 1])
-        with col_analyze_title:
+        colA, colB, colC = st.columns([7, 1, 3])
+        with colA:
             st.markdown("<div class='titulo-secao'>🧠 Análise Técnica</div>", unsafe_allow_html=True)
-        with col_analyze_button:
-            if st.button("🔄", key="update_btn", help="Atualizar análise agora"):
-                st.session_state["last_update"] = datetime.now()
+        with colB:
+            refresh = st.button("🔄", help="Atualizar análise")
+        with colC:
+            st.markdown(f"<div style='text-align:right; font-size:12px; color:gray;'>🕒 Atualizado em: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>", unsafe_allow_html=True)
 
         if "last_update" not in st.session_state:
             st.session_state["last_update"] = datetime.now()
 
+        if refresh:
+            st.session_state["last_update"] = datetime.now()
+
         if "cached_analysis" not in st.session_state or (
             datetime.now() - st.session_state["last_update"]).seconds > 900:
-            analysis_prompt = f"""
-Você é um analista técnico. Com base nos indicadores MACD, RSI, Bollinger, ADX, SMA, Suporte e Resistência nos timeframes 1H, 4H, 1D, forneça uma análise técnica **resumida em até 450 caracteres**, estruturada em 3 classificações:
+            prompt = f"""
+Você é um analista técnico. Com base nos indicadores MACD, RSI, Bollinger, ADX, SMA, Suporte e Resistência nos timeframes 1H, 4H, 1D, forneça uma análise técnica **resumida e clara** com classificações:
 
-1. **Momentum**: atrativo / neutro / adverso – com breve justificativa técnica.
-2. **Tendência**: subida / descida / lateralizada – com base em MACD, BB, SMA.
-3. **Confiança**: alto / médio / baixo – considere volume, ADX e consistência entre timeframes.
+1. **Momentum**: atrativo / neutro / adverso – e sua leitura.
+2. **Tendência**: subida / descida / lateralizada – com justificativa técnica.
+3. **Confiança**: alto / médio / baixo – considerando consistência entre timeframes, ADX e volume.
 
-Evite repetir números. Foque na **leitura técnica do cenário** atual.
+A leitura deve ajudar um investidor a entender se há oportunidade ou cautela.
             """
             response = openai.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "Você é um analista técnico objetivo, com tom profissional e direto."},
-                    {"role": "user", "content": analysis_prompt}
+                    {"role": "system", "content": "Você é um analista técnico profissional e direto."},
+                    {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
                 max_tokens=600
@@ -199,23 +200,21 @@ Evite repetir números. Foque na **leitura técnica do cenário** atual.
         st.markdown(f"""
         <div style='background:#f4f4f4;padding:15px;border-radius:8px; font-size:16px; line-height:1.6em;'>
             {st.session_state["cached_analysis"]}
-            <br><span style='font-size:12px; color:gray;'>🕒 Última atualização: {st.session_state["last_update"].strftime('%d/%m/%Y %H:%M:%S')}</span>
         </div>
         """, unsafe_allow_html=True)
-
     # === Tabela técnica
     st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
     st.markdown(f"""
     <table>
         <tr>
             <th>Timeframe</th>
-            <th title="Variação % preço">Variação</th>
-            <th title="MACD vs linha de sinal">MACD</th>
-            <th title="Força relativa (RSI)">RSI</th>
-            <th title="Bandas de Bollinger">Bollinger</th>
-            <th title="Tendência (ADX)">ADX</th>
-            <th title="Médias 50/200 períodos">SMA</th>
-            <th title="Suporte/Resistência">S/R</th>
+            <th title="Variação percentual do preço em relação ao candle anterior.">Variação</th>
+            <th title="Diferença entre MACD e sua média de sinal.">MACD</th>
+            <th title="Índice de Força Relativa, indica sobrecompra/sobrevenda.">RSI</th>
+            <th title="Bandas de Bollinger — volatilidade e extremos de preço.">Bollinger</th>
+            <th title="ADX mostra força da tendência, acima de 25 indica força.">ADX</th>
+            <th title="Golden/Death Cross: média móvel 50 vs 200.">SMA</th>
+            <th title="Níveis extremos recentes de preço (suporte/resistência).">S/R</th>
         </tr>
         <tr><td>1D</td><td>{i1d[0]}</td><td>{i1d[1]}</td><td>{i1d[2]}</td><td>{i1d[3]}</td><td>{i1d[4]}</td><td>{i1d[5]}</td><td>{i1d[6]}</td></tr>
         <tr><td>4H</td><td>{i4h[0]}</td><td>{i4h[1]}</td><td>{i4h[2]}</td><td>{i4h[3]}</td><td>{i4h[4]}</td><td>{i4h[5]}</td><td>{i4h[6]}</td></tr>
@@ -223,11 +222,17 @@ Evite repetir números. Foque na **leitura técnica do cenário** atual.
     </table>
     """, unsafe_allow_html=True)
 
-    # === Legenda
+    # === Legenda expandida
     st.markdown("""
-    <div style='margin-top:20px;font-size:15px'>
-    <b>🔎 Legenda:</b><br>
-    🔼/🔽: Tendência | 📈/📉/⏸️: MACD | 🟢/🟡/🔴: RSI | 🟦/🟥/🟨: Bollinger | 🔥/💤: ADX | 💰/💀: SMA | 🧱/🪟/〰️: Suporte/Resistência
+    <div style='margin-top:20px; font-size:15px'>
+    <b>🔎 Legenda de Indicadores e Ícones:</b><br>
+    🔼/🔽: Variação positiva/negativa no último candle.  
+    📈/📉/⏸️: MACD maior/menor/igual ao sinal – tendência crescente, decrescente ou neutra.  
+    🟢 RSI &gt; 70 (sobrecompra) | 🔴 RSI &lt; 30 (sobrevenda) | 🟡 zona neutra (30–70).  
+    🟦 Preço acima da banda superior | 🟥 abaixo da inferior | 🟨 dentro das bandas.  
+    🔥 ADX &gt; 25 (tendência forte) | 💤 tendência fraca ou lateral.  
+    💰 Crz. Alta (SMA50 cruzando acima da SMA200) | 💀 Crz. Baixa (SMA50 abaixo da SMA200).  
+    🧱 Suporte | 🪟 Resistência — baseados nos extremos de preço recentes | 〰️ entre zonas.
     </div>
     """, unsafe_allow_html=True)
 
