@@ -183,19 +183,35 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
         st.markdown(f"""
         <table>
-        <tr><th>Timeframe</th><th>Variação</th><th>MACD</th><th>RSI</th><th>Bollinger</th><th>ADX</th><th>SMA 50/200</th><th>S/R</th><th>Volume</th></tr>
+        <tr>
+            <th>Timeframe</th>
+            <th title="Variação percentual do preço em relação ao candle anterior.">Variação</th>
+            <th title="MACD mostra força da tendência com base em médias móveis.">MACD</th>
+            <th title="RSI identifica condições de sobrecompra ou sobrevenda.">RSI</th>
+            <th title="Bandas de Bollinger indicam volatilidade e possíveis reversões.">Bollinger</th>
+            <th title="ADX mede a força da tendência, acima de 25 indica força.">ADX</th>
+            <th title="Cruzamento das médias móveis de 50 e 200 períodos.">SMA 50/200</th>
+            <th title="Posição atual em relação ao suporte e resistência.">S/R</th>
+            <th title="Volume negociado no candle mais recente.">Volume</th>
+        </tr>
         <tr><td>1D</td><td>{i1d[0]}</td><td>{i1d[1]}</td><td>{i1d[2]}</td><td>{i1d[3]}</td><td>{i1d[4]}</td><td>{i1d[5]}</td><td>{i1d[6]}</td><td>{i1d[7]}</td></tr>
         <tr><td>4H</td><td>{i4h[0]}</td><td>{i4h[1]}</td><td>{i4h[2]}</td><td>{i4h[3]}</td><td>{i4h[4]}</td><td>{i4h[5]}</td><td>{i4h[6]}</td><td>{i4h[7]}</td></tr>
         <tr><td>1H</td><td>{i1h[0]}</td><td>{i1h[1]}</td><td>{i1h[2]}</td><td>{i1h[3]}</td><td>{i1h[4]}</td><td>{i1h[5]}</td><td>{i1h[6]}</td><td>{i1h[7]}</td></tr>
         </table>
         """, unsafe_allow_html=True)
 
+
         st.markdown("""
-        🔎 **Legenda de Ícones**  
-        🔼/🔽: Tendência | 📈/📉: MACD | 🟢/🔴/🟡: RSI | 🟦/🟥: Bollinger |  
-        💰 Crz. Alta / 💀 Crz. Baixa: SMA | 🔥 Forte ADX / 💤 Fraco |  
-        🧱 Suporte / 🪟 Resistência / 〰️ Zona neutra
+        🔎 **Legenda de Ícones e Indicadores**  
+        - 🔼/🔽: Variação do preço  
+        - 📈/📉/⏸️: MACD acima, abaixo ou neutro em relação ao sinal  
+        - 🟢 (>70) / 🟡 (30-70) / 🔴 (<30): RSI indicando sobrecompra, neutro ou sobrevenda  
+        - 🟦 Fora da banda superior / 🟥 Fora da inferior / 🟨 Dentro da banda: Bollinger  
+        - 🔥 Forte tendência (ADX > 25) / 💤 Fraca ou lateral  
+        - 💰 Crz. Alta (Golden Cross) / 💀 Crz. Baixa (Death Cross): cruzamento SMA 50/200  
+        - 🧱 Perto do suporte / 🪟 Perto da resistência / 〰️ Zona neutra  
         """)
+
 
     # === Gráfico
     df_48h = df_1h[-48:]
