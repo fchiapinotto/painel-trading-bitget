@@ -97,6 +97,7 @@ def compute_indicators(df):
     df["rsi"] = 100 - (100 / (1 + rs))
     return df
 
+# Coleta e cálculo
 df_1h = compute_indicators(fetch_and_process_candles("1H", 100))
 df_4h = compute_indicators(fetch_and_process_candles("4H", 100))
 df_1d = compute_indicators(fetch_and_process_candles("1D", 100))
@@ -186,24 +187,36 @@ Você é um especialista em trading de futuros de criptomoedas. Com base nos dad
 3. Padrões técnicos observados
 4. Oportunidades e riscos para investidores de curto e médio prazo
 
-Indicadores Técnicos (últimos valores):
-- Preço atual: ${last_price:,.0f}
-- Variação 1H: {var_pct:.2f}%
-- MACD 1H: {df_1h['macd'].iloc[-1]:.2f} | Sinal: {df_1h['signal'].iloc[-1]:.2f}
-- RSI 1H: {df_1h['rsi'].iloc[-1]:.1f}
-- Bollinger: Inferior = {df_1h['lower'].iloc[-1]:,.0f}, Superior = {df_1h['upper'].iloc[-1]:,.0f}
+Indicadores Técnicos:
 
-Seja claro, conciso e didático para iniciantes.
+- 1H:
+  - Variação: {v1h}
+  - MACD: {df_1h['macd'].iloc[-1]:.2f} | Sinal: {df_1h['signal'].iloc[-1]:.2f}
+  - RSI: {df_1h['rsi'].iloc[-1]:.1f}
+  - Bollinger: {b1h}
+
+- 4H:
+  - MACD: {df_4h['macd'].iloc[-1]:.2f} | Sinal: {df_4h['signal'].iloc[-1]:.2f}
+  - RSI: {df_4h['rsi'].iloc[-1]:.1f}
+  - Bollinger: {b4h}
+
+- 1D:
+  - MACD: {df_1d['macd'].iloc[-1]:.2f} | Sinal: {df_1d['signal'].iloc[-1]:.2f}
+  - RSI: {df_1d['rsi'].iloc[-1]:.1f}
+  - Bollinger: {b1d}
+
+Seja claro, técnico e didático.
 """
+
         with st.spinner("Gerando análise..."):
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "Você é um analista técnico de criptomoedas especialista em futuros."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.7,
-                max_tokens=700
+                max_tokens=800
             )
             output = response.choices[0].message.content
             st.success("✅ Análise gerada com sucesso!")
