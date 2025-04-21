@@ -179,48 +179,42 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
     st.markdown("<div class='titulo-secao'>📋 Análise de Especialista – Crypto Trade Analyst</div>", unsafe_allow_html=True)
 
     if st.button("🔍 Gerar Análise Técnica"):
+        support = df_1h["low"].min()
+        resistance = df_1h["high"].max()
         prompt = f"""
-Você é um especialista em trading de futuros de criptomoedas. Com base nos dados técnicos abaixo (extraídos de um painel analítico de BTC/USDT), forneça uma análise clara e objetiva sobre:
+Você é um especialista em trading de futuros de criptomoedas. Com base nos indicadores técnicos abaixo, forneça uma análise completa e clara, focada em:
 
-1. A tendência atual do BTC
-2. Sinais de força ou fraqueza no mercado
-3. Padrões técnicos observados
-4. Oportunidades e riscos para investidores de curto e médio prazo
+✅ Tendência e sinais técnicos  
+🚀 Oportunidades de entrada  
+⚠️ Riscos e áreas de cautela
 
-Indicadores Técnicos:
+📌 Preço atual: ${last_price:,.0f}  
+📊 Suporte: {support:,.0f} | Resistência: {resistance:,.0f}
 
-- 1H:
-  - Variação: {v1h}
-  - MACD: {df_1h['macd'].iloc[-1]:.2f} | Sinal: {df_1h['signal'].iloc[-1]:.2f}
-  - RSI: {df_1h['rsi'].iloc[-1]:.1f}
-  - Bollinger: {b1h}
+🔸 Indicadores 1H:
+- MACD: {df_1h['macd'].iloc[-1]:.2f} | Sinal: {df_1h['signal'].iloc[-1]:.2f}
+- RSI: {df_1h['rsi'].iloc[-1]:.1f}
 
-- 4H:
-  - MACD: {df_4h['macd'].iloc[-1]:.2f} | Sinal: {df_4h['signal'].iloc[-1]:.2f}
-  - RSI: {df_4h['rsi'].iloc[-1]:.1f}
-  - Bollinger: {b4h}
+🔸 Indicadores 4H:
+- MACD: {df_4h['macd'].iloc[-1]:.2f} | Sinal: {df_4h['signal'].iloc[-1]:.2f}
+- RSI: {df_4h['rsi'].iloc[-1]:.1f}
 
-- 1D:
-  - MACD: {df_1d['macd'].iloc[-1]:.2f} | Sinal: {df_1d['signal'].iloc[-1]:.2f}
-  - RSI: {df_1d['rsi'].iloc[-1]:.1f}
-  - Bollinger: {b1d}
-
-Seja claro, técnico e didático.
+🔸 Indicadores 1D:
+- MACD: {df_1d['macd'].iloc[-1]:.2f} | Sinal: {df_1d['signal'].iloc[-1]:.2f}
+- RSI: {df_1d['rsi'].iloc[-1]:.1f}
 """
-
         with st.spinner("Gerando análise..."):
-            response = openai.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "Você é um analista técnico de criptomoedas especialista em futuros."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.7,
+                temperature=0.6,
                 max_tokens=800
             )
-            output = response.choices[0].message.content
             st.success("✅ Análise gerada com sucesso!")
-            st.markdown(f"<div style='background:#f9f9f9; padding:20px; border-radius:10px'>{output}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='background:#f9f9f9;padding:20px;border-radius:10px'>{response.choices[0].message.content}</div>", unsafe_allow_html=True)
 
 else:
     st.error("❌ Erro ao carregar dados da API Bitget.")
