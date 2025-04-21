@@ -175,17 +175,51 @@ if df_1h is not None:
         if refresh:
             st.session_state["last_update"] = datetime.now()
 
-        if "cached_analysis" not in st.session_state or (
+               if "cached_analysis" not in st.session_state or (
             datetime.now() - st.session_state["last_update"]).seconds > 900:
+
+            def build_block(df, label):
+                last = df.iloc[-1]
+                macd = last["macd"]
+                signal = last["signal"]
+                rsi = last["rsi"]
+                upper = last["upper"]
+                lower = last["lower"]
+                adx = last["adx"]
+                sma50 = last["sma50"]
+                sma200 = last["sma200"]
+                suporte = df["low"].min()
+                resistencia = df["high"].max()
+                preco = last["close"]
+                variacao = ((last["close"] - df.iloc[-2]["close"]) / df.iloc[-2]["close"]) * 100
+
+                return f"""
+🔹 {label}:
+- Preço atual: ${preco:,.0f}
+- Variação: {variacao:.2f}%
+- MACD: {macd:.2f} | Sinal: {signal:.2f}
+- RSI: {rsi:.1f}
+- Bollinger: Limites [${lower:,.0f} – ${upper:,.0f}]
+- ADX: {adx:.1f}
+- SMA 50: {sma50:,.0f} | SMA 200: {sma200:,.0f}
+- Suporte: ${suporte:,.0f} | Resistência: ${resistencia:,.0f}
+"""
+
             prompt = f"""
-Você é um analista técnico. Com base nos indicadores MACD, RSI, Bollinger, ADX, SMA, Suporte e Resistência nos timeframes 1H, 4H, 1D, forneça uma análise técnica **resumida e clara** com classificações:
+Você é um analista técnico. Com base nos indicadores abaixo, forneça uma análise **resumida e clara** com foco em ajudar um investidor a entender se o momento atual oferece oportunidade ou exige cautela. Estruture sua resposta com 3 classificações:
 
 1. **Momentum**: atrativo / neutro / adverso – e sua leitura.
 2. **Tendência**: subida / descida / lateralizada – com justificativa técnica.
-3. **Confiança**: alto / médio / baixo – considerando consistência entre timeframes, ADX e volume.
+3. **Confiança**: alto / médio / baixo – com base em ADX, volume e convergência dos timeframes.
 
-A leitura deve ajudar um investidor a entender se há oportunidade ou cautela.
-            """
+A análise deve ser objetiva, profissional e embasada tecnicamente.
+
+Indicadores:
+{build_block(df_1h, "1H")}
+{build_block(df_4h, "4H")}
+{build_block(df_1d, "1D")}
+"""
+
             response = openai.chat.completions.create(
                 model="gpt-4",
                 messages=[
@@ -193,7 +227,7 @@ A leitura deve ajudar um investidor a entender se há oportunidade ou cautela.
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.4,
-                max_tokens=600
+                max_tokens=700
             )
             st.session_state["cached_analysis"] = response.choices[0].message.content
 
@@ -202,6 +236,7 @@ A leitura deve ajudar um investidor a entender se há oportunidade ou cautela.
             {st.session_state["cached_analysis"]}
         </div>
         """, unsafe_allow_html=True)
+
     # === Tabela técnica
     st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
     st.markdown(f"""
