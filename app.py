@@ -180,29 +180,41 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
     st.markdown("<div class='titulo-secao'>📋 Análise de Especialista – Crypto Trade Analyst</div>", unsafe_allow_html=True)
 
     if st.button("🔍 Gerar Análise Técnica"):
-        support = df_1h["low"].min()
-        resistance = df_1h["high"].max()
-        prompt = f"""
-Você é um especialista em trading de futuros de criptomoedas. Com base nos indicadores técnicos abaixo, forneça uma análise completa e clara, focada em:
+        support_1h = df_1h["low"].min()
+        resistance_1h = df_1h["high"].max()
+        support_4h = df_4h["low"].min()
+        resistance_4h = df_4h["high"].max()
+        support_1d = df_1d["low"].min()
+        resistance_1d = df_1d["high"].max()
+        
+    prompt = f"""
+Você é um especialista em trading de futuros de criptomoedas. Com base nos indicadores técnicos abaixo, forneça uma análise concissa e clara, focada em:
 
-✅ Tendência e sinais técnicos  
-🚀 Oportunidades de entrada  
-⚠️ Riscos e áreas de cautela
+✅ Tendência e sinais técnicos - Visão geral do mercado, principais movimentos observados com base na análise técnica.
+🚀 Oportunidades - Trazer oportunidades em bullet points vinculado a momentos de entrada em grid trading futuros, cosiderando diferentes estratégias no curto prazo
+⚠️ Riscos - trazer riscos em bullet points vinculado a estratégias e movimentos que não devem ser tomadas no momento.
 
 📌 Preço atual: ${last_price:,.0f}  
-📊 Suporte: {support:,.0f} | Resistência: {resistance:,.0f}
 
 🔸 Indicadores 1H:
 - MACD: {df_1h['macd'].iloc[-1]:.2f} | Sinal: {df_1h['signal'].iloc[-1]:.2f}
 - RSI: {df_1h['rsi'].iloc[-1]:.1f}
+- Suporte: {support_1h:,.0f}
+- Resistência: {resistance_1h:,.0f}
 
 🔸 Indicadores 4H:
 - MACD: {df_4h['macd'].iloc[-1]:.2f} | Sinal: {df_4h['signal'].iloc[-1]:.2f}
 - RSI: {df_4h['rsi'].iloc[-1]:.1f}
+- Suporte: {support_4h:,.0f}
+- Resistência: {resistance_4h:,.0f}
 
 🔸 Indicadores 1D:
 - MACD: {df_1d['macd'].iloc[-1]:.2f} | Sinal: {df_1d['signal'].iloc[-1]:.2f}
 - RSI: {df_1d['rsi'].iloc[-1]:.1f}
+- Suporte: {support_1d:,.0f}
+- Resistência: {resistance_1d:,.0f}
+
+
 """
         with st.spinner("Gerando análise..."):
             response = openai.chat.completions.create(
