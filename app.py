@@ -143,14 +143,14 @@ def extract_info(df):
         sr_icon
     )
 
-# === BLOCO PRINCIPAL
-if df_1h is not None and df_4h is not None and df_1d is not None:
+if df_1h is not None:
     i1d, i4h, i1h = extract_info(df_1d), extract_info(df_4h), extract_info(df_1h)
     last_price = df_1h["close"].iloc[-1]
     var_pct = ((last_price - df_1h["close"].iloc[-2]) / df_1h["close"].iloc[-2]) * 100
     var_icon = "🔼" if var_pct > 0 else "🔽" if var_pct < 0 else "➖"
     var_class = "var-up" if var_pct > 0 else "var-down" if var_pct < 0 else "var-neutral"
 
+    # Bloco superior
     col1, col2 = st.columns([1.2, 2.8])
 
     with col1:
@@ -164,27 +164,27 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
         """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown(
-            "<div style='display:flex;justify-content:space-between;align-items:center;'>"
-            "<div class='titulo-secao'>🧠 Análise Técnica</div>"
-            "<div>"
-            + st.button("🔄", key="update_btn", help="Atualizar análise agora", use_container_width=False)
-            + "</div></div>", unsafe_allow_html=True)
+        col_analyze_title, col_analyze_button = st.columns([8, 1])
+        with col_analyze_title:
+            st.markdown("<div class='titulo-secao'>🧠 Análise Técnica</div>", unsafe_allow_html=True)
+        with col_analyze_button:
+            if st.button("🔄", key="update_btn", help="Atualizar análise agora"):
+                st.session_state["last_update"] = datetime.now()
 
         if "last_update" not in st.session_state:
             st.session_state["last_update"] = datetime.now()
 
-        if st.session_state.get("update_btn"):
-            st.session_state["last_update"] = datetime.now()
-
-        if "cached_analysis" not in st.session_state or (datetime.now() - st.session_state["last_update"]).seconds > 900:
+        if "cached_analysis" not in st.session_state or (
+            datetime.now() - st.session_state["last_update"]).seconds > 900:
             analysis_prompt = f"""
 Você é um analista técnico. Com base nos indicadores MACD, RSI, Bollinger, ADX, SMA, Suporte e Resistência nos timeframes 1H, 4H, 1D, forneça uma análise técnica **resumida em até 450 caracteres**, estruturada em 3 classificações:
 
 1. **Momentum**: atrativo / neutro / adverso – com breve justificativa técnica.
 2. **Tendência**: subida / descida / lateralizada – com base em MACD, BB, SMA.
 3. **Confiança**: alto / médio / baixo – considere volume, ADX e consistência entre timeframes.
-"""
+
+Evite repetir números. Foque na **leitura técnica do cenário** atual.
+            """
             response = openai.chat.completions.create(
                 model="gpt-4",
                 messages=[
@@ -203,7 +203,7 @@ Você é um analista técnico. Com base nos indicadores MACD, RSI, Bollinger, AD
         </div>
         """, unsafe_allow_html=True)
 
-    # === Tabela Técnica
+    # === Tabela técnica
     st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
     st.markdown(f"""
     <table>
