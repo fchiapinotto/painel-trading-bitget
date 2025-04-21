@@ -4,6 +4,8 @@ import plotly.graph_objects as go
 import requests
 from datetime import datetime
 import openai
+pip install --upgrade openai
+
 
 # === Carregar chave da OpenAI do secrets
 openai.api_key = st.secrets["openai"]["openai_api_key"]
