@@ -215,7 +215,7 @@ Você é um especialista em trading de futuros de criptomoedas. Com base nos ind
 - Resistência: {resistance_1d:,.0f}
 
 
-"""
+        """
         with st.spinner("Gerando análise..."):
             response = openai.chat.completions.create(
                 model="gpt-4",
