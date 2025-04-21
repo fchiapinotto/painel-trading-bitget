@@ -6,7 +6,7 @@ from datetime import datetime
 import openai
 
 # === Carregar chave da OpenAI do secrets
-openai.api_key = st.secrets["openai_api_key"]
+openai.api_key = st.secrets["openai"]["openai_api_key"]
 
 # === Configuração da página
 st.set_page_config(page_title="Painel BTC/USDT", layout="wide")
