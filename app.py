@@ -204,7 +204,7 @@ Você é um especialista em trading de futuros de criptomoedas. Com base nos ind
 - RSI: {df_1d['rsi'].iloc[-1]:.1f}
 """
         with st.spinner("Gerando análise..."):
-            response = openai.ChatCompletion.create(
+            response = openai.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": "Você é um analista técnico de criptomoedas especialista em futuros."},
