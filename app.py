@@ -150,32 +150,60 @@ if df_1h is not None:
     var_icon = "🔼" if var_pct > 0 else "🔽" if var_pct < 0 else "➖"
     var_class = "var-up" if var_pct > 0 else "var-down" if var_pct < 0 else "var-neutral"
 
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.markdown("<div class='titulo-secao'>💰 BTC Agora</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='card-btc'><div class='card-preco'>${last_price:,.0f}</div><div class='card-var {var_class}'>{var_icon} {var_pct:.2f}%</div></div>", unsafe_allow_html=True)
+col1, col2 = st.columns([1.2, 2.8])
 
-    with col2:
-        st.markdown("<div class='titulo-secao'>🧠 Análise Técnica</div>", unsafe_allow_html=True)
-        if "last_update" not in st.session_state:
-            st.session_state["last_update"] = datetime.now()
-        if st.button("🔄 Atualizar Agora"):
-            st.session_state["last_update"] = datetime.now()
+with col1:
+    st.markdown("<div class='titulo-secao'>💰 BTC Agora</div>", unsafe_allow_html=True)
+    st.markdown(f"""
+        <div class='card-btc'>
+            <div class='card-preco'>${last_price:,.0f}</div>
+            <div class='card-var {var_class}'>{var_icon} {var_pct:.2f}%</div>
+        </div>
+        <div style='text-align:right; font-size:12px; color:gray;'>🕒 {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</div>
+    """, unsafe_allow_html=True)
 
-        if "cached_analysis" not in st.session_state or (datetime.now() - st.session_state["last_update"]).seconds > 900:
-            prompt = f"""Você é um analista técnico. Gere uma análise executiva do comportamento técnico do BTC/USDT com base nos seguintes dados:
-            - 1H: MACD {df_1h['macd'].iloc[-1]:.2f}, RSI {df_1h['rsi'].iloc[-1]:.1f}, ADX {df_1h['adx'].iloc[-1]:.1f}
-            - 4H: MACD {df_4h['macd'].iloc[-1]:.2f}, RSI {df_4h['rsi'].iloc[-1]:.1f}, ADX {df_4h['adx'].iloc[-1]:.1f}
-            - 1D: MACD {df_1d['macd'].iloc[-1]:.2f}, RSI {df_1d['rsi'].iloc[-1]:.1f}, ADX {df_1d['adx'].iloc[-1]:.1f}
-            Foque em tendências, sinais de entrada ou risco."""
-            response = openai.chat.completions.create(
-                model="gpt-4",
-                messages=[{"role": "system", "content": "Seja objetivo e técnico."}, {"role": "user", "content": prompt}],
-                temperature=0.4, max_tokens=600
-            )
-            st.session_state["cached_analysis"] = response.choices[0].message.content
+with col2:
+    st.markdown(
+        "<div style='display:flex;justify-content:space-between;align-items:center;'>"
+        "<div class='titulo-secao'>🧠 Análise Técnica</div>"
+        "<div>"
+        + st.button("🔄", key="update_btn", help="Atualizar análise agora", use_container_width=False)
+        + "</div></div>", unsafe_allow_html=True)
 
-        st.markdown(f"<div style='background:#f4f4f4;padding:15px;border-radius:8px; font-size:16px;'><i>{st.session_state['cached_analysis']}</i><br><br><span style='font-size:13px;color:gray;'>🕒 Atualizado: {st.session_state['last_update'].strftime('%d/%m/%Y %H:%M:%S')}</span></div>", unsafe_allow_html=True)
+    if "last_update" not in st.session_state:
+        st.session_state["last_update"] = datetime.now()
+
+    if st.session_state.get("update_btn"):
+        st.session_state["last_update"] = datetime.now()
+
+    if "cached_analysis" not in st.session_state or (datetime.now() - st.session_state["last_update"]).seconds > 900:
+        analysis_prompt = f"""
+Você é um analista técnico. Com base nos indicadores MACD, RSI, Bollinger, ADX, SMA, Suporte e Resistência nos timeframes 1H, 4H, 1D, forneça uma análise técnica **resumida em até 450 caracteres**, estruturada em 3 classificações:
+
+1. **Momentum**: atrativo / neutro / adverso – com breve justificativa técnica.
+2. **Tendência**: subida / descida / lateralizada – com base em MACD, BB, SMA.
+3. **Confiança**: alto / médio / baixo – considere volume, ADX e consistência entre timeframes.
+
+Evite repetir números. Foque na **leitura técnica do cenário** atual.
+        """
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "Você é um analista técnico objetivo, com tom profissional e direto."},
+                {"role": "user", "content": analysis_prompt}
+            ],
+            temperature=0.4,
+            max_tokens=600
+        )
+        st.session_state["cached_analysis"] = response.choices[0].message.content
+
+    st.markdown(f"""
+    <div style='background:#f4f4f4;padding:15px;border-radius:8px; font-size:16px; line-height:1.6em;'>
+        {st.session_state["cached_analysis"]}
+        <br><span style='font-size:12px; color:gray;'>🕒 Última atualização: {st.session_state["last_update"].strftime('%d/%m/%Y %H:%M:%S')}</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
 
     # === Tabela técnica
     st.markdown("<div class='titulo-secao'>📊 Indicadores Técnicos</div>", unsafe_allow_html=True)
