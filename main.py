@@ -32,7 +32,7 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
     i1d = extract_info(df_1d)
 
     last_price = df_1h["close"].iloc[-1]
-    …
+    
 
 
     # ========== BLOCO SUPERIOR: Preço + Análise ==========
