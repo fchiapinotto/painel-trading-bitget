@@ -33,6 +33,12 @@ if df_1h is not None and df_4h is not None and df_1d is not None:
 
     last_price = df_1h["close"].iloc[-1]
     
+    # ─── CÁLCULO DA VARIAÇÃO E ÍCONES ───
+    prev_price = df_1h["close"].iloc[-2]  # preço do candle anterior (1H atrás)
+    var_pct   = (last_price - prev_price) / prev_price * 100
+    var_icon  = "🔺" if var_pct >= 0 else "🔻"
+    var_class = "positive" if var_pct >= 0 else "negative"
+
 
 
     # ========== BLOCO SUPERIOR: Preço + Análise ==========
