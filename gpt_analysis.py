@@ -1,5 +1,3 @@
-### gpt_analysis.py
-```python
 import openai
 import streamlit as st
 from datetime import datetime, timedelta
