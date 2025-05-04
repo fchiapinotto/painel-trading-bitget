@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 
 def set_custom_styles():
@@ -10,4 +9,3 @@ def set_custom_styles():
     .badge { background: #1f4e78; color: #ffffff; padding: 4px 8px; border-radius: 4px; margin-right: 4px; }
     </style>
     """, unsafe_allow_html=True)
-```  
