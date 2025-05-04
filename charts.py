@@ -1,5 +1,3 @@
-### charts.py
-```python
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -23,4 +21,3 @@ def render_candles_bollinger(df, support_resistance=None):
         fig.add_hline(y=res, line_dash='dash', annotation_text='Resistência')
     fig.update_layout(xaxis_title='Hora', yaxis_title='Preço (USDT)', height=400)
     st.plotly_chart(fig, use_container_width=True)
-```  
