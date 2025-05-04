@@ -1,5 +1,3 @@
-```python
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -94,4 +92,3 @@ st.markdown("### 🗓️ Eventos Relevantes")
 events = gpt_events()
 for e in events:
     st.write(f"- {e['date']} — {e['title']}")
-```  
