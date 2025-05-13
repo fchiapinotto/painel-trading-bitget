@@ -74,3 +74,13 @@ def extract_info(df):
         sma_icon,
         sr_icon
     )
+### indicators.py (adição)
+```python
+import pandas as pd
+
+def extract_supports_resistances(df, period='24H'):
+    # Exemplo simples: último valor de min/max de janela 20
+    sup = df['low'].rolling(window=20).min().iloc[-1]
+    res = df['high'].rolling(window=20).max().iloc[-1]
+    return {'support': sup, 'resistance': res}
+```  
